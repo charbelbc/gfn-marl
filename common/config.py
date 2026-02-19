@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 @dataclass
 class Config:
 
-    env_name: str = "MultiGrid-MyEnv-v0"
+    env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
     model_type: str = "standard"
 

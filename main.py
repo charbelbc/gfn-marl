@@ -10,13 +10,12 @@ os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def main():
+
     load_dotenv()
     wandb_key = os.getenv("WANDB_API_KEY")
     wandb.login(key=wandb_key)
 
     config = Config()
-
-    print("hello ")
 
     with wandb.init(project="wi-symmetry", config=config.__dict__):
         train(config=config)
