@@ -4,13 +4,15 @@ from common.config import Config
 from train import train
 import os
 import wandb
+from dotenv import load_dotenv
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 
 def main():
-
-    wandb.login(key="12fcfca1020dbadb9edb283382ef69da389c17eb")
+    load_dotenv()
+    wandb_key = os.getenv("WANDB_API_KEY")
+    wandb.login(key=wandb_key)
 
     config = Config()
 
