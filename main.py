@@ -14,6 +14,8 @@ def main():
 
     config = Config()
 
+    print("hello")
+
     with wandb.init(project="wi-symmetry", config=config.__dict__):
         train(config=config)
 
