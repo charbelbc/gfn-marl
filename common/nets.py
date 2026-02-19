@@ -189,7 +189,7 @@ class ACNetwork(torch.nn.Module):
                     embedding,
                 ],
                 dim=-1,
-            )
+            ).to(observations.device)
         ).log_softmax(dim=-1)
         value = self.critic(embedding[:batch])
 
