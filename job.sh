@@ -13,6 +13,6 @@
 module --force purge
 module load pytorch/2.2
 source /projappl/project_2007401/genflownet/bin/activate
-cd /projappl/project_2007401/AAA
+cd /projappl/project_2007401/gfn-marl
 
 srun python main.py
