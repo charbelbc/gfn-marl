@@ -185,11 +185,13 @@ class ACNetwork(torch.nn.Module):
                     torch.nn.functional.one_hot(
                         torch.arange(agents).repeat_interleave(batch),
                         num_classes=agents,
-                    ).float(),
+                    )
+                    .float()
+                    .to(observations.device),
                     embedding,
                 ],
                 dim=-1,
-            ).to(observations.device)
+            )
         ).log_softmax(dim=-1)
         value = self.critic(embedding[:batch])
 
