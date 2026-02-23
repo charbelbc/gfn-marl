@@ -135,8 +135,10 @@ class ACNetwork(torch.nn.Module):
 
         self.memory_rnn = torch.nn.LSTMCell(128, memory_size)
 
+        self.agent_id = torch.nn.Embedding(n_agents, 16)
+
         self.actor = torch.nn.Sequential(
-            torch.nn.Linear(memory_size + n_agents, 256),
+            torch.nn.Linear(memory_size + 16, 256),
             torch.nn.Tanh(),
             torch.nn.Linear(256, 64),
             torch.nn.Linear(64, action_dim),
@@ -182,12 +184,17 @@ class ACNetwork(torch.nn.Module):
         actor_logits = self.actor(
             torch.cat(
                 [
-                    torch.nn.functional.one_hot(
-                        torch.arange(agents).repeat_interleave(batch),
-                        num_classes=agents,
-                    )
-                    .float()
-                    .to(observations.device),
+                    # torch.nn.functional.one_hot(
+                    #     torch.arange(agents).repeat_interleave(batch),
+                    #     num_classes=agents,
+                    # )
+                    # .float()
+                    # .to(observations.device),
+                    self.agent_id(
+                        torch.arange(agents)
+                        .repeat_interleave(batch)
+                        .to(observations.device)
+                    ),
                     embedding,
                 ],
                 dim=-1,
