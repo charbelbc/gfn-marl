@@ -252,7 +252,7 @@ class MPE_MAPPO:
             self.device
         )
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         old_actions = torch.cat(
@@ -293,12 +293,13 @@ class MPE_MAPPO:
             ) * advantages.unsqueeze(1).repeat(1, self.n_agents)
             policy_loss = -torch.min(surr1, surr2).mean()
 
-            value_clipped = old_values + torch.clamp(
-                values_now - old_values, -self.eps_clip, self.eps_clip
-            )
-            value_surr1 = (values_now - returns).pow(2)
-            value_surr2 = (value_clipped - returns).pow(2)
-            value_loss = torch.max(value_surr1, value_surr2).mean()
+            # value_clipped = old_values + torch.clamp(
+            #     values_now - old_values, -self.eps_clip, self.eps_clip
+            # )
+            # value_surr1 = (values_now - returns).pow(2)
+            # value_surr2 = (value_clipped - returns).pow(2)
+            # value_loss = torch.max(value_surr1, value_surr2).mean()
+            value_loss = (values_now - returns).pow(2).mean()
 
             loss = policy_loss + 0.5 * value_loss - 0.01 * entropy.mean()
 
