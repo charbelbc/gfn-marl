@@ -211,6 +211,14 @@ class ACNetwork(torch.nn.Module):
         )
 
 
+def orthogonal_init(layer, gain=1.0):
+    for name, param in layer.named_parameters():
+        if "bias" in name:
+            torch.nn.init.constant_(param, 0)
+        elif "weight" in name:
+            torch.nn.init.orthogonal_(param, gain=gain)
+
+
 class MPE_ACNetwork(torch.nn.Module):
 
     def __init__(self, action_dim: int = 5):
@@ -218,9 +226,9 @@ class MPE_ACNetwork(torch.nn.Module):
         self.action_dim = action_dim
 
         self.actor = torch.nn.Sequential(
-            torch.nn.Linear(12, 256),
+            torch.nn.Linear(12, 64),
             torch.nn.Tanh(),
-            torch.nn.Linear(256, 64),
+            torch.nn.Linear(64, 64),
             torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
             torch.nn.Tanh(),
@@ -228,16 +236,17 @@ class MPE_ACNetwork(torch.nn.Module):
         )
 
         self.critic = torch.nn.Sequential(
-            torch.nn.Linear(24, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 64),
-            torch.nn.ReLU(),
+            torch.nn.Linear(24, 64),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
+            torch.nn.Linear(64, 64),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 1),
         )
 
-        # self.apply(initialize_parameters)
+        orthogonal_init(self.actor)
+        orthogonal_init(self.critic)
 
     def forward(self, observations):
 

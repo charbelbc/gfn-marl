@@ -119,7 +119,7 @@ def train_mpe(
     batch_size = config.batch_size
     agent = MPE_MAPPO(
         device=device,
-        n_agents=config.n_agents,
+        n_agents=config.num_agents,
         gamma=config.gamma,
         gaelambda=config.gaelambda,
         ppo_epochs=config.ppo_epochs,
@@ -147,7 +147,7 @@ def train_mpe(
 
         while not doness.all():
             actions, logits, value = agent.select_action(obs)
-            next_obs = env.step(actions)
+            next_obs = env.step(actions.cpu())
             rewards = torch.tensor([o[1][0] for o in next_obs])
             dones = torch.tensor([o[2][0] for o in next_obs])
             buffer.store_transition(
@@ -179,7 +179,7 @@ def train_mpe(
                 {
                     "reward": curr_reward / batch_size,
                 },
-                step=episode,
+                step=episode * config.episode_length,
             )
             # print(episode, curr_reward)
             if episode % 100_000 == 0:

@@ -238,8 +238,8 @@ class MPE_MAPPO:
             d = dones[e, :L]
             gae = 0
             for t in reversed(range(L)):
-                delta = r[t] + 0.99 * v[t + 1] * (1 - d[t]) - v[t]
-                gae = delta + 0.99 * 0.99 * (1 - d[t]) * gae
+                delta = r[t] + self.gamma * v[t + 1] * (1 - d[t]) - v[t]
+                gae = delta + self.gaelambda * self.gamma * (1 - d[t]) * gae
                 advantages[e, t] = gae
             returns[e, :L] = advantages[e, :L] + values[e, :L]
         advantages = torch.cat([advantages[e, : lengths[e]] for e in range(batch)]).to(
@@ -304,5 +304,5 @@ class MPE_MAPPO:
 
             self.optimizer.zero_grad()
             loss.mean().backward()
-            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
             self.optimizer.step()

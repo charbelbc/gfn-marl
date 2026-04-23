@@ -28,4 +28,4 @@ class Config:
     gaelambda: float = 0.95
     ppo_epochs: int = 10
     eps_clip: float = 0.2
-    lr: float = 0.001
+    lr: float = 0.0005
