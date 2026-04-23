@@ -6,8 +6,8 @@ from dataclasses import dataclass, field
 class Config:
 
     scenario_name: str = "simple_spread"
-    num_agents: int = 2
-    num_landmarks: int = 2
+    num_agents: int = 3
+    num_landmarks: int = 3
     episode_length: int = 25
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
