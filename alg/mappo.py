@@ -234,7 +234,7 @@ class MPE_MAPPO:
             else:
                 L = max_T
             r = rewards[e, :L]
-            v = torch.cat([values[e, :L], torch.tensor([0])])
+            v = values[e, : L + 1]
             d = dones[e, :L]
             gae = 0
             for t in reversed(range(L)):

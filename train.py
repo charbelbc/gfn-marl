@@ -162,12 +162,14 @@ def train_mpe(
                 dones,
             )
             curr_reward += rewards.mean().item()
+            obs = [o[0] for o in next_obs]
             for e in range(batch_size):
                 if dones[e] and not doness[e]:
                     doness[e] = True
                     buffer.buffer["lengths"][e] = step
+                    _, _, value = agent.select_action(obs)
+                    buffer.buffer["state_values"][e] = value[e]
             step += 1
-            obs = [o[0] for o in next_obs]
 
         agent.update(buffer)
         buffer.reset_buffer()
