@@ -179,7 +179,7 @@ def train_mpe(
         if logging:
             wandb.log(
                 {
-                    "reward": curr_reward / batch_size,
+                    "reward": curr_reward,
                 },
                 step=episode * config.episode_length,
             )

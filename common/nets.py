@@ -221,12 +221,12 @@ def orthogonal_init(layer, gain=1.0):
 
 class MPE_ACNetwork(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5):
+    def __init__(self, action_dim: int = 5, n_agents: int = 2):
         super().__init__()
         self.action_dim = action_dim
 
         self.actor = torch.nn.Sequential(
-            torch.nn.Linear(12, 64),
+            torch.nn.Linear(6 * n_agents, 64),
             torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
             torch.nn.Tanh(),
@@ -236,7 +236,7 @@ class MPE_ACNetwork(torch.nn.Module):
         )
 
         self.critic = torch.nn.Sequential(
-            torch.nn.Linear(24, 64),
+            torch.nn.Linear(6 * n_agents * n_agents, 64),
             torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
             torch.nn.Tanh(),

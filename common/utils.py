@@ -130,7 +130,9 @@ class MPE_ReplayBuffer:
 
     def reset_buffer(self):
         self.buffer = {
-            "states": np.zeros([self.batch_size, self.ep_limit, self.n_agents, 12]),
+            "states": np.zeros(
+                [self.batch_size, self.ep_limit, self.n_agents, 6 * self.n_agents]
+            ),
             "actions": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "log_probs": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "rewards": np.empty([self.batch_size, self.ep_limit]),

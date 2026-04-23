@@ -199,7 +199,9 @@ class MPE_MAPPO:
         self.eps_clip = eps_clip
         self.action_dim = action_dim
 
-        self.policy = MPE_ACNetwork(action_dim=action_dim).to(self.device)
+        self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
+            self.device
+        )
         self.policy.train()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr)
 
