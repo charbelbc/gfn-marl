@@ -168,7 +168,7 @@ def train_mpe(
                     doness[e] = True
                     buffer.buffer["lengths"][e] = step
                     _, _, value = agent.select_action(obs)
-                    buffer.buffer["state_values"][e] = value[e]
+                    buffer.buffer["state_values"][e] = value[e].cpu()
             step += 1
 
         agent.update(buffer)
