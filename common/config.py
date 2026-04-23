@@ -8,7 +8,7 @@ class Config:
     scenario_name: str = "simple_spread"
     num_agents: int = 2
     num_landmarks: int = 2
-    episode_length: int = 50
+    episode_length: int = 25
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
