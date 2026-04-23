@@ -1,7 +1,7 @@
 import numpy as np
 import gymnasium as gym
 from common.config import Config
-from train import train
+from train import train, train_mpe
 import os
 import wandb
 from dotenv import load_dotenv
@@ -18,7 +18,7 @@ def main():
     config = Config()
 
     with wandb.init(project="wi-symmetry", config=config.__dict__):
-        train(config=config)
+        train_mpe(config=config)
 
 
 if __name__ == "__main__":
