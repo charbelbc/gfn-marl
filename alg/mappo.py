@@ -221,7 +221,7 @@ class MPE_MAPPO:
     def update(self, buffer: ReplayBuffer):
 
         rewards = torch.tensor(buffer.buffer["rewards"])
-        values = torch.tensor(buffer.buffer["state_values"])
+        values = torch.tensor(buffer.buffer["state_values"]).detach()
         dones = torch.tensor(buffer.buffer["is_terminals"])
         lengths = torch.tensor(buffer.buffer["lengths"]).int() + 1
         advantages = torch.zeros_like(rewards)
@@ -248,11 +248,13 @@ class MPE_MAPPO:
         returns = torch.cat([returns[e, : lengths[e]] for e in range(batch)]).to(
             self.device
         )
-        old_values = torch.cat([values[e, : lengths[e]] for e in range(batch)]).to(
-            self.device
+        old_values = (
+            torch.cat([values[e, : lengths[e]] for e in range(batch)])
+            .to(self.device)
+            .detach()
         )
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
-        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         old_actions = torch.cat(
@@ -261,12 +263,16 @@ class MPE_MAPPO:
                 for e in range(batch)
             ]
         ).to(self.device)
-        old_logprobs = torch.cat(
-            [
-                torch.tensor(buffer.buffer["log_probs"][e, : lengths[e]])
-                for e in range(batch)
-            ]
-        ).to(self.device)
+        old_logprobs = (
+            torch.cat(
+                [
+                    torch.tensor(buffer.buffer["log_probs"][e, : lengths[e]])
+                    for e in range(batch)
+                ]
+            )
+            .detach()
+            .to(self.device)
+        )
 
         for _ in range(self.ppo_epochs):
 
@@ -293,7 +299,7 @@ class MPE_MAPPO:
             ) * advantages.unsqueeze(1).repeat(1, self.n_agents)
             policy_loss = -torch.min(surr1, surr2).mean()
 
-            # value_clipped = old_values + torch.clamp(
+            # value_clipped = old_values - returns + torch.clamp(
             #     values_now - old_values, -self.eps_clip, self.eps_clip
             # )
             # value_surr1 = (values_now - returns).pow(2)
