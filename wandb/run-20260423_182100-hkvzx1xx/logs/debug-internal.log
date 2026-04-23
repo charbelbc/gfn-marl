@@ -1,0 +1,16 @@
+{"time":"2026-04-23T18:21:00.4031497+03:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"c:\\Users\\cbouchaa23\\Desktop\\gfn-marl\\wandb\\run-20260423_182100-hkvzx1xx\\logs\\debug-core.log"}
+{"time":"2026-04-23T18:21:00.5314455+03:00","level":"INFO","msg":"created new stream","id":"hkvzx1xx"}
+{"time":"2026-04-23T18:21:00.5314455+03:00","level":"INFO","msg":"stream: started","id":"hkvzx1xx"}
+{"time":"2026-04-23T18:21:00.5314455+03:00","level":"INFO","msg":"writer: Do: started","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:21:00.5314455+03:00","level":"INFO","msg":"sender: started","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:21:00.5314455+03:00","level":"INFO","msg":"handler: started","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:21:02.1725888+03:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-23T18:23:35.8016528+03:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-23T18:23:35.8062478+03:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-23T18:23:36.8094759+03:00","level":"INFO","msg":"handler: operation stats","stats":{"operations":[{"desc":"uploading config.yaml","runtime_seconds":0.017308,"progress":"1.0KB/1.0KB"}],"total_operations":1}}
+{"time":"2026-04-23T18:23:37.0421869+03:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T18:23:37.4622776+03:00","level":"INFO","msg":"stream: closing","id":"hkvzx1xx"}
+{"time":"2026-04-23T18:23:37.4622776+03:00","level":"INFO","msg":"handler: closed","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:23:37.4622776+03:00","level":"INFO","msg":"writer: Close: closed","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:23:37.4622776+03:00","level":"INFO","msg":"sender: closed","stream_id":"hkvzx1xx"}
+{"time":"2026-04-23T18:23:37.4627845+03:00","level":"INFO","msg":"stream: closed","id":"hkvzx1xx"}

@@ -1,0 +1,16 @@
+{"time":"2026-04-23T18:19:18.9247183+03:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"c:\\Users\\cbouchaa23\\Desktop\\gfn-marl\\wandb\\run-20260423_181918-dzs3qi4m\\logs\\debug-core.log"}
+{"time":"2026-04-23T18:19:19.0448875+03:00","level":"INFO","msg":"created new stream","id":"dzs3qi4m"}
+{"time":"2026-04-23T18:19:19.0448875+03:00","level":"INFO","msg":"stream: started","id":"dzs3qi4m"}
+{"time":"2026-04-23T18:19:19.0448875+03:00","level":"INFO","msg":"writer: Do: started","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:19:19.0448875+03:00","level":"INFO","msg":"handler: started","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:19:19.0448875+03:00","level":"INFO","msg":"sender: started","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:19:19.8629729+03:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-23T18:20:33.9314936+03:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-23T18:20:33.9335194+03:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-23T18:20:34.9117039+03:00","level":"INFO","msg":"handler: operation stats","stats":{"operations":[{"desc":"uploading output.log","runtime_seconds":0.2433303,"progress":"3.5KB/3.5KB"}],"total_operations":1}}
+{"time":"2026-04-23T18:20:35.4717987+03:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T18:20:36.2823335+03:00","level":"INFO","msg":"stream: closing","id":"dzs3qi4m"}
+{"time":"2026-04-23T18:20:36.2823335+03:00","level":"INFO","msg":"handler: closed","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:20:36.2823335+03:00","level":"INFO","msg":"writer: Close: closed","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:20:36.2828428+03:00","level":"INFO","msg":"sender: closed","stream_id":"dzs3qi4m"}
+{"time":"2026-04-23T18:20:36.2828428+03:00","level":"INFO","msg":"stream: closed","id":"dzs3qi4m"}

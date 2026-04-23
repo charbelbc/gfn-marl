@@ -2,8 +2,9 @@ import torch
 import numpy as np
 from common.config import Config
 import gymnasium as gym
-from alg.mappo import MAPPO
-from common.utils import ReplayBuffer, ParallelEnv
+from alg.mappo import MAPPO, MPE_MAPPO
+from common.utils import ReplayBuffer, ParallelEnv, MPE_ReplayBuffer
+from mpe.MPE_env import MPEEnv
 
 import multigrid.envs
 import gymnasium as gym
@@ -105,5 +106,81 @@ def train(
                 },
                 step=episode,
             )
+            if episode % 100_000 == 0:
+                torch.save(agent.policy.state_dict(), "model")
+
+
+def train_mpe(
+    config: Config,
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    logging: bool = True,
+):
+
+    batch_size = config.batch_size
+    agent = MPE_MAPPO(
+        device=device,
+        n_agents=config.n_agents,
+        gamma=config.gamma,
+        gaelambda=config.gaelambda,
+        ppo_epochs=config.ppo_epochs,
+        eps_clip=config.eps_clip,
+        lr=config.lr,
+        action_dim=config.action_dim,
+    )
+    buffer = MPE_ReplayBuffer(
+        batch_size=batch_size,
+        ep_limit=config.episode_length,
+        n_agents=config.num_agents,
+    )
+    envs = [MPEEnv(config) for _ in range(batch_size)]
+    env = ParallelEnv(envs)
+
+    episode = 0
+
+    while episode < 4_000_000:
+
+        obs = env.reset()
+        dones = torch.zeros(batch_size, dtype=bool)
+        doness = dones.clone()
+        step = 0
+        curr_reward = 0.0
+
+        while not doness.all():
+            actions, logits, value = agent.select_action(obs)
+            next_obs = env.step(actions)
+            rewards = torch.tensor([o[1][0] for o in next_obs])
+            dones = torch.tensor([o[2][0] for o in next_obs])
+            buffer.store_transition(
+                step,
+                obs,
+                actions.argmax(-1).cpu(),
+                torch.gather(logits, -1, actions.argmax(-1).unsqueeze(-1))
+                .squeeze()
+                .cpu(),
+                value.squeeze().cpu(),
+                rewards.squeeze(),
+                dones,
+            )
+            curr_reward += rewards.mean().item()
+            for e in range(batch_size):
+                if dones[e] and not doness[e]:
+                    doness[e] = True
+                    buffer.buffer["lengths"][e] = step
+            step += 1
+            obs = [o[0] for o in next_obs]
+
+        agent.update(buffer)
+        buffer.reset_buffer()
+        episode += batch_size
+
+        # print(episode)
+        if logging:
+            wandb.log(
+                {
+                    "reward": curr_reward / batch_size,
+                },
+                step=episode,
+            )
+            # print(episode, curr_reward)
             if episode % 100_000 == 0:
                 torch.save(agent.policy.state_dict(), "model")

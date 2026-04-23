@@ -1,0 +1,97 @@
+20 -270.03192267503374
+40 -250.7057665567846
+60 -228.22264977802786
+80 -253.39389124761806
+100 -270.447693682205
+120 -238.75455600033118
+140 -223.75579053975673
+160 -246.59087673268195
+180 -222.30364355962018
+200 -213.55930452253824
+220 -216.76872684694828
+240 -212.50878363047187
+260 -216.85421883746392
+280 -227.04500408218595
+300 -192.48452317489262
+320 -216.4123977839326
+340 -213.28366302641544
+360 -218.4352338627655
+380 -209.74421444647405
+400 -197.77380933793032
+420 -211.01627352594457
+440 -199.21641056778512
+460 -202.4844465384253
+480 -215.23166210810126
+500 -206.6585065441033
+520 -216.22482519395405
+540 -209.11954720012142
+560 -203.96477194130182
+580 -209.42129697313044
+600 -201.51598796151154
+620 -212.72174455149275
+640 -217.18917681962748
+660 -224.05752611684787
+680 -202.73248064975567
+700 -206.50710467471222
+720 -200.97147813323437
+740 -197.32120539142218
+760 -189.71735505578567
+780 -207.5889726035986
+800 -200.88201877594236
+820 -204.01910668530923
+840 -205.9014226278636
+860 -202.55068932557668
+880 -202.71825865707436
+900 -197.53194483211263
+920 -207.89870358352982
+940 -200.99393839136422
+960 -205.20786789132615
+980 -200.55600835551925
+1000 -196.64599292516
+1020 -203.89219684230008
+1040 -199.169389118839
+1060 -199.30283234775172
+1080 -187.66066994878145
+1100 -204.23440920095456
+1120 -205.6360512265303
+1140 -200.690227344685
+1160 -195.86451719466805
+1180 -197.85556127818393
+1200 -201.85565615246566
+1220 -204.1761813578044
+1240 -202.4942834234058
+1260 -194.80124393566305
+1280 -199.97528452400147
+1300 -194.73596015329747
+1320 -201.413825283542
+1340 -202.31025054768904
+1360 -190.3142794207378
+1380 -198.81191427963674
+1400 -206.6035352226919
+1420 -202.78818002187344
+Traceback (most recent call last):
+  File "C:\Users\cbouchaa23\AppData\Local\Temp\ipykernel_5588\3308821906.py", line 7, in <module>
+    train_mpe(config=config)
+  File "c:\Users\cbouchaa23\Desktop\gfn-marl\train.py", line 149, in train_mpe
+    actions, logits, value = agent.select_action(obs)
+  File "c:\Users\cbouchaa23\Desktop\gfn-marl\alg\mappo.py", line 210, in select_action
+    logits, value = self.policy(obs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Desktop\gfn-marl\common\nets.py", line 244, in forward
+    actor_logits = self.actor(observations).log_softmax(dim=-1)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\container.py", line 244, in forward
+    input = module(input)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1773, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\module.py", line 1784, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\site-packages\torch\nn\modules\linear.py", line 125, in forward
+    return F.linear(input, self.weight, self.bias)
+KeyboardInterrupt

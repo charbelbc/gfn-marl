@@ -209,3 +209,39 @@ class ACNetwork(torch.nn.Module):
             .reshape(agents, batch, 2 * self.memory_size)
             .transpose(0, 1),
         )
+
+
+class MPE_ACNetwork(torch.nn.Module):
+
+    def __init__(self, action_dim: int = 5):
+        super().__init__()
+        self.action_dim = action_dim
+
+        self.actor = torch.nn.Sequential(
+            torch.nn.Linear(12, 256),
+            torch.nn.Tanh(),
+            torch.nn.Linear(256, 64),
+            torch.nn.Tanh(),
+            torch.nn.Linear(64, 64),
+            torch.nn.Tanh(),
+            torch.nn.Linear(64, action_dim),
+        )
+
+        self.critic = torch.nn.Sequential(
+            torch.nn.Linear(24, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 1),
+        )
+
+        # self.apply(initialize_parameters)
+
+    def forward(self, observations):
+
+        actor_logits = self.actor(observations).log_softmax(dim=-1)
+        value = self.critic(observations.flatten(1))
+
+        return actor_logits, value

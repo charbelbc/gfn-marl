@@ -1,0 +1,16 @@
+{"time":"2026-04-23T18:08:51.021702+03:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"c:\\Users\\cbouchaa23\\Desktop\\gfn-marl\\wandb\\run-20260423_180850-diedp557\\logs\\debug-core.log"}
+{"time":"2026-04-23T18:08:51.1442942+03:00","level":"INFO","msg":"created new stream","id":"diedp557"}
+{"time":"2026-04-23T18:08:51.1442942+03:00","level":"INFO","msg":"stream: started","id":"diedp557"}
+{"time":"2026-04-23T18:08:51.1442942+03:00","level":"INFO","msg":"handler: started","stream_id":"diedp557"}
+{"time":"2026-04-23T18:08:51.1442942+03:00","level":"INFO","msg":"sender: started","stream_id":"diedp557"}
+{"time":"2026-04-23T18:08:51.1442942+03:00","level":"INFO","msg":"writer: Do: started","stream_id":"diedp557"}
+{"time":"2026-04-23T18:08:51.8638436+03:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-23T18:09:49.192107+03:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-23T18:09:49.1997417+03:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-23T18:09:50.1341971+03:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T18:09:50.2122884+03:00","level":"INFO","msg":"handler: operation stats","stats":{"operations":[{"desc":"uploading history steps 8-16, summary, console lines 9-28","runtime_seconds":0.0775794}],"total_operations":1}}
+{"time":"2026-04-23T18:09:50.5851074+03:00","level":"INFO","msg":"stream: closing","id":"diedp557"}
+{"time":"2026-04-23T18:09:50.5851074+03:00","level":"INFO","msg":"handler: closed","stream_id":"diedp557"}
+{"time":"2026-04-23T18:09:50.5851074+03:00","level":"INFO","msg":"writer: Close: closed","stream_id":"diedp557"}
+{"time":"2026-04-23T18:09:50.5851074+03:00","level":"INFO","msg":"sender: closed","stream_id":"diedp557"}
+{"time":"2026-04-23T18:09:50.5856162+03:00","level":"INFO","msg":"stream: closed","id":"diedp557"}

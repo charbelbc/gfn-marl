@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from common.nets import ACNetwork, InstructionsPreprocessor
+from common.nets import ACNetwork, InstructionsPreprocessor, MPE_ACNetwork
 from common.utils import ReplayBuffer
 
 
@@ -146,6 +146,137 @@ class MAPPO:
             )
 
             values_now = torch.stack(values_now, dim=1).squeeze(-1)
+            values_now = torch.cat(
+                [values_now[i, : lengths[i]] for i in range(len(lengths))],
+                dim=0,
+            )
+
+            distribution_now = torch.distributions.Categorical(logits=logits_now)
+            logprobs_now = distribution_now.log_prob(old_actions)
+            entropy = distribution_now.entropy()
+            ratios = torch.exp(logprobs_now - old_logprobs)
+
+            surr1 = ratios * advantages.unsqueeze(1).repeat(1, self.n_agents)
+            surr2 = torch.clamp(
+                ratios, 1 - self.eps_clip, 1 + self.eps_clip
+            ) * advantages.unsqueeze(1).repeat(1, self.n_agents)
+            policy_loss = -torch.min(surr1, surr2).mean()
+
+            value_clipped = old_values + torch.clamp(
+                values_now - old_values, -self.eps_clip, self.eps_clip
+            )
+            value_surr1 = (values_now - returns).pow(2)
+            value_surr2 = (value_clipped - returns).pow(2)
+            value_loss = torch.max(value_surr1, value_surr2).mean()
+
+            loss = policy_loss + 0.5 * value_loss - 0.01 * entropy.mean()
+
+            self.optimizer.zero_grad()
+            loss.mean().backward()
+            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=0.5)
+            self.optimizer.step()
+
+
+class MPE_MAPPO:
+
+    def __init__(
+        self,
+        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        n_agents: int = 2,
+        gamma: float = 0.99,
+        gaelambda: float = 0.95,
+        ppo_epochs: int = 10,
+        eps_clip: float = 0.2,
+        lr: float = 0.001,
+        action_dim: int = 5,
+    ):
+
+        self.n_agents = n_agents
+        self.device = device
+        self.gamma = gamma
+        self.gaelambda = gaelambda
+        self.ppo_epochs = ppo_epochs
+        self.eps_clip = eps_clip
+        self.action_dim = action_dim
+
+        self.policy = MPE_ACNetwork(action_dim=action_dim).to(self.device)
+        self.policy.train()
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr)
+
+    def select_action(self, obs):
+
+        with torch.no_grad():
+            obs = torch.from_numpy(np.stack(obs)).float().to(self.device)
+            logits, value = self.policy(obs)
+            action = torch.nn.functional.one_hot(
+                logits.softmax(-1)
+                .flatten(0, 1)
+                .multinomial(1)
+                .reshape(obs.shape[0], obs.shape[1]),
+                5,
+            )
+
+        return action, logits, value.squeeze()
+
+    def update(self, buffer: ReplayBuffer):
+
+        rewards = torch.tensor(buffer.buffer["rewards"])
+        values = torch.tensor(buffer.buffer["state_values"])
+        dones = torch.tensor(buffer.buffer["is_terminals"])
+        lengths = torch.tensor(buffer.buffer["lengths"]).int() + 1
+        advantages = torch.zeros_like(rewards)
+        returns = torch.zeros_like(rewards)
+        batch, max_T = rewards.shape
+        for e in range(batch):
+            done_idx = torch.where(dones[e])[0]
+            if len(done_idx) > 0:
+                L = done_idx[0].item() + 1
+            else:
+                L = max_T
+            r = rewards[e, :L]
+            v = torch.cat([values[e, :L], torch.tensor([0])])
+            d = dones[e, :L]
+            gae = 0
+            for t in reversed(range(L)):
+                delta = r[t] + 0.99 * v[t + 1] * (1 - d[t]) - v[t]
+                gae = delta + 0.99 * 0.99 * (1 - d[t]) * gae
+                advantages[e, t] = gae
+            returns[e, :L] = advantages[e, :L] + values[e, :L]
+        advantages = torch.cat([advantages[e, : lengths[e]] for e in range(batch)]).to(
+            self.device
+        )
+        returns = torch.cat([returns[e, : lengths[e]] for e in range(batch)]).to(
+            self.device
+        )
+        old_values = torch.cat([values[e, : lengths[e]] for e in range(batch)]).to(
+            self.device
+        )
+        advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
+        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+
+        old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
+        old_actions = torch.cat(
+            [
+                torch.tensor(buffer.buffer["actions"][e, : lengths[e]])
+                for e in range(batch)
+            ]
+        ).to(self.device)
+        old_logprobs = torch.cat(
+            [
+                torch.tensor(buffer.buffer["log_probs"][e, : lengths[e]])
+                for e in range(batch)
+            ]
+        ).to(self.device)
+
+        for _ in range(self.ppo_epochs):
+
+            logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
+            logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
+            values_now = values_now.reshape(batch, max_T)
+            logits_now = torch.cat(
+                [logits_now[i, : lengths[i]] for i in range(len(lengths))],
+                dim=0,
+            )
             values_now = torch.cat(
                 [values_now[i, : lengths[i]] for i in range(len(lengths))],
                 dim=0,

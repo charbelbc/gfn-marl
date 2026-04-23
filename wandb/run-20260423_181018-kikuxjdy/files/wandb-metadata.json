@@ -1,0 +1,31 @@
+{
+  "os":  "Windows-10-10.0.26200-SP0",
+  "python":  "CPython 3.10.13",
+  "startedAt":  "2026-04-23T15:10:18.635295Z",
+  "program":  "c:\\Users\\cbouchaa23\\Desktop\\gfn-marl\\Untitled-1.ipynb",
+  "codePath":  "Untitled-1.ipynb",
+  "git":  {
+    "remote":  "https://github.com/charbelbc/gfn-marl.git",
+    "commit":  "b88b5e7271dfb0dcef7a306be04022c0e1abff10"
+  },
+  "email":  "charbel.bouchaaya@oulu.fi",
+  "root":  "c:\\Users\\cbouchaa23\\Desktop\\gfn-marl",
+  "host":  "oy2206037",
+  "executable":  "c:\\Users\\cbouchaa23\\Anaconda3\\envs\\gfn\\python.exe",
+  "codePathLocal":  "Untitled-1.ipynb",
+  "cpu_count":  4,
+  "cpu_count_logical":  8,
+  "disk":  {
+    "/":  {
+      "total":  "506332180480",
+      "used":  "409594478592"
+    }
+  },
+  "memory":  {
+    "total":  "16885276672"
+  },
+  "cpu":  {
+    "count":  4,
+    "countLogical":  8
+  }
+}

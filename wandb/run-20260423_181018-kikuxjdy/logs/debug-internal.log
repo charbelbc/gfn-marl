@@ -1,0 +1,16 @@
+{"time":"2026-04-23T18:10:18.639815+03:00","level":"INFO","msg":"stream: starting","core version":"0.19.8","symlink path":"c:\\Users\\cbouchaa23\\Desktop\\gfn-marl\\wandb\\run-20260423_181018-kikuxjdy\\logs\\debug-core.log"}
+{"time":"2026-04-23T18:10:18.7604527+03:00","level":"INFO","msg":"created new stream","id":"kikuxjdy"}
+{"time":"2026-04-23T18:10:18.7604527+03:00","level":"INFO","msg":"stream: started","id":"kikuxjdy"}
+{"time":"2026-04-23T18:10:18.7604527+03:00","level":"INFO","msg":"writer: Do: started","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:10:18.7604527+03:00","level":"INFO","msg":"handler: started","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:10:18.7604527+03:00","level":"INFO","msg":"sender: started","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:10:19.5722063+03:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2026-04-23T18:13:21.5767991+03:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2026-04-23T18:13:21.5773935+03:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2026-04-23T18:13:22.5754818+03:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2026-04-23T18:13:22.5960485+03:00","level":"INFO","msg":"handler: operation stats","stats":{"operations":[{"desc":"uploading history steps 173-175, summary, console lines 174-187","runtime_seconds":0.0205664}],"total_operations":1}}
+{"time":"2026-04-23T18:13:22.9434572+03:00","level":"INFO","msg":"stream: closing","id":"kikuxjdy"}
+{"time":"2026-04-23T18:13:22.9434572+03:00","level":"INFO","msg":"handler: closed","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:13:22.9434572+03:00","level":"INFO","msg":"writer: Close: closed","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:13:22.9434572+03:00","level":"INFO","msg":"sender: closed","stream_id":"kikuxjdy"}
+{"time":"2026-04-23T18:13:22.9441701+03:00","level":"INFO","msg":"stream: closed","id":"kikuxjdy"}

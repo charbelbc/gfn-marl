@@ -1,0 +1,29 @@
+20 tensor(-265.2483, dtype=torch.float64)
+40 tensor(-268.5929, dtype=torch.float64)
+60 tensor(-253.6192, dtype=torch.float64)
+80 tensor(-237.9365, dtype=torch.float64)
+100 tensor(-258.4113, dtype=torch.float64)
+120 tensor(-232.2855, dtype=torch.float64)
+140 tensor(-231.3839, dtype=torch.float64)
+160 tensor(-228.6248, dtype=torch.float64)
+180 tensor(-218.2328, dtype=torch.float64)
+200 tensor(-205.7557, dtype=torch.float64)
+220 tensor(-210.0836, dtype=torch.float64)
+240 tensor(-211.5272, dtype=torch.float64)
+260 tensor(-205.9817, dtype=torch.float64)
+280 tensor(-204.6455, dtype=torch.float64)
+300 tensor(-230.6555, dtype=torch.float64)
+320 tensor(-200.1043, dtype=torch.float64)
+340 tensor(-212.7731, dtype=torch.float64)
+Traceback (most recent call last):
+  File "C:\Users\cbouchaa23\AppData\Local\Temp\ipykernel_18028\3308821906.py", line 7, in <module>
+    train_mpe(config=config)
+  File "c:\Users\cbouchaa23\Desktop\gfn-marl\train.py", line 150, in train_mpe
+    next_obs = env.step(actions)
+  File "c:\Users\cbouchaa23\Desktop\gfn-marl\common\utils.py", line 59, in step
+    local.send(("step", action))
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\multiprocessing\connection.py", line 206, in send
+    self._send_bytes(_ForkingPickler.dumps(obj))
+  File "c:\Users\cbouchaa23\Anaconda3\envs\gfn\lib\multiprocessing\connection.py", line 280, in _send_bytes
+    ov, err = _winapi.WriteFile(self._handle, buf, overlapped=True)
+KeyboardInterrupt
