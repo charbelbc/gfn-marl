@@ -250,7 +250,7 @@ class MPE_ACNetwork(torch.nn.Module):
 
     def forward(self, observations):
 
-        actor_logits = self.actor(observations).log_softmax(dim=-1)
+        actor_logits = self.actor(observations)  # .log_softmax(dim=-1)
         value = self.critic(observations.flatten(1))
 
         return actor_logits, value

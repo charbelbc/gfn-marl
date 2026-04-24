@@ -26,6 +26,6 @@ class Config:
     # PPO parameters
     gamma: float = 0.99
     gaelambda: float = 0.95
-    ppo_epochs: int = 10
+    ppo_epochs: int = 15
     eps_clip: float = 0.2
     lr: float = 0.0005
