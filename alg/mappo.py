@@ -203,7 +203,7 @@ class MPE_MAPPO:
             self.device
         )
         self.policy.train()
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
 
     def select_action(self, obs):
 

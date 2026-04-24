@@ -208,7 +208,9 @@ def train_mpe(
         buffer.reset_buffer()
         episode += batch_size
 
-        # print(episode)
+        lr_now = config.lr * (1 - (episode * config.episode_length) / 3_000_000)
+        agent.optimizer.param_groups[0]["lr"] = lr_now
+
         if logging:
             wandb.log(
                 {
