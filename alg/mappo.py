@@ -352,7 +352,8 @@ class MPE_MAPPO:
 
             self.optimizer.zero_grad()
             loss.mean().backward()
-            torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
+            # torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
+            torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
             self.optimizer.step()
 
         losses = {
