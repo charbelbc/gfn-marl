@@ -214,19 +214,21 @@ def train_mpe(
                     buffer.buffer["state_values"][e] = value[e].cpu()
             step += 1
 
-        agent.update(buffer)
+        loss_dict = agent.update(buffer)
         buffer.reset_buffer()
         episode += batch_size
 
         lr_now = config.lr * (1 - (episode * config.episode_length) / 3_000_000)
         agent.optimizer.param_groups[0]["lr"] = lr_now
-        print("x")
 
         if logging:
-            wandb.log(
+            loss_dict.update(
                 {
                     "reward": curr_reward,
-                },
+                }
+            )
+            wandb.log(
+                loss_dict,
                 step=episode * config.episode_length,
             )
             # print(episode, curr_reward)
