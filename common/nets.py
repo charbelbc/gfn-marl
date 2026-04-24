@@ -256,6 +256,48 @@ class MPE_ACNetwork(torch.nn.Module):
         return actor_logits, value
 
 
+class MPE_Actor(torch.nn.Module):
+
+    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+        super().__init__()
+        self.action_dim = action_dim
+        self.actor = torch.nn.Sequential(
+            torch.nn.Linear(6 * n_agents, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, action_dim),
+        )
+        orthogonal_init(self.actor)
+
+    def forward(self, observations):
+        actor_logits = self.actor(observations)
+        return actor_logits
+
+
+class MPE_Critic(torch.nn.Module):
+
+    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+        super().__init__()
+        self.action_dim = action_dim
+        self.critic = torch.nn.Sequential(
+            torch.nn.Linear(6 * n_agents * n_agents, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 64),
+            torch.nn.ReLU(),
+            torch.nn.Linear(64, 1),
+        )
+        orthogonal_init(self.critic)
+
+    def forward(self, observations):
+        value = self.critic(observations.flatten(1))
+        return value
+
+
 class MPE_RNN_ACNetwork(torch.nn.Module):
 
     def __init__(self, action_dim: int = 5, n_agents: int = 2):

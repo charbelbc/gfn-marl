@@ -5,6 +5,8 @@ from common.nets import (
     InstructionsPreprocessor,
     MPE_ACNetwork,
     MPE_RNN_ACNetwork,
+    MPE_Actor,
+    MPE_Critic,
 )
 from common.utils import ReplayBuffer
 
@@ -211,17 +213,29 @@ class MPE_MAPPO:
                 action_dim=action_dim, n_agents=n_agents
             ).to(self.device)
         else:
-            self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
+            # self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
+            #     self.device
+            # )
+            self.actor = MPE_Actor(action_dim=action_dim, n_agents=n_agents).to(
                 self.device
             )
-        self.policy.train()
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
+            self.critic = MPE_Critic(action_dim=action_dim, n_agents=n_agents).to(
+                self.device
+            )
+            self.ac_parameters = list(self.actor.parameters()) + list(
+                self.critic.parameters()
+            )
+        # self.policy.train()
+        # self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
+        self.optimizer = torch.optim.Adam(self.ac_parameters, lr=lr, eps=1e-5)
 
     def select_action(self, obs):
 
         with torch.no_grad():
             obs = torch.from_numpy(np.stack(obs)).float().to(self.device)
-            logits, value = self.policy(obs)
+            # logits, value = self.policy(obs)
+            logits = self.actor(obs)
+            value = self.critic(obs)
             action = torch.nn.functional.one_hot(
                 logits.softmax(-1)
                 .flatten(0, 1)
@@ -301,7 +315,9 @@ class MPE_MAPPO:
                 logits_now = torch.stack(logits_now, dim=1)
                 values_now = torch.stack(values_now, dim=1).squeeze(-1)
             else:
-                logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
+                # logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
+                logits_now = self.actor(old_states.flatten(0, 1).float())
+                values_now = self.critic(old_states.flatten(0, 1).float())
                 logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
                 values_now = values_now.reshape(batch, max_T)
             logits_now = torch.cat(
