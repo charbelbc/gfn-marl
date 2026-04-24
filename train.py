@@ -110,6 +110,37 @@ def train(
                 torch.save(agent.policy.state_dict(), "model")
 
 
+class RunningMeanStd:
+    def __init__(self, shape):
+        self.n = 0
+        self.mean = np.zeros(shape)
+        self.S = np.zeros(shape)
+        self.std = np.sqrt(self.S)
+
+    def update(self, x):
+        x = np.array(x)
+        self.n += 1
+        if self.n == 1:
+            self.mean = x
+            self.std = x
+        else:
+            old_mean = self.mean.copy()
+            self.mean = old_mean + (x - old_mean) / self.n
+            self.S = self.S + (x - old_mean) * (x - self.mean)
+            self.std = np.sqrt(self.S / self.n)
+
+
+class Normalization:
+    def __init__(self, shape):
+        self.running_ms = RunningMeanStd(shape=shape)
+
+    def __call__(self, x, update=True):
+        if update:
+            self.running_ms.update(x)
+        x = (x - self.running_ms.mean) / (self.running_ms.std + 1e-8)
+        return x
+
+
 def train_mpe(
     config: Config,
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
@@ -136,6 +167,7 @@ def train_mpe(
     env = ParallelEnv(envs)
 
     episode = 0
+    reward_norm = Normalization(1)
 
     while episode < 4_000_000:
 
@@ -149,6 +181,7 @@ def train_mpe(
             actions, logits, value = agent.select_action(obs)
             next_obs = env.step(actions.cpu())
             rewards = torch.tensor([o[1][0] for o in next_obs])
+            normalized_rewards = reward_norm(rewards)
             dones = torch.tensor([o[2][0] for o in next_obs])
             buffer.store_transition(
                 step,
@@ -158,7 +191,7 @@ def train_mpe(
                 .squeeze()
                 .cpu(),
                 value.squeeze().cpu(),
-                rewards.squeeze(),
+                normalized_rewards.squeeze(),
                 dones,
             )
             curr_reward += rewards.mean().item()
