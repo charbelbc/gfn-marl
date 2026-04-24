@@ -256,7 +256,7 @@ class MPE_MAPPO:
             .detach()
         )
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         old_actions = torch.cat(
