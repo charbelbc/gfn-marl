@@ -233,4 +233,4 @@ def train_mpe(
             )
             # print(episode, curr_reward)
             if episode % (100 * batch_size) == 0:
-                torch.save(agent.policy.state_dict(), "model")
+                torch.save(agent.actor.state_dict(), "model")
