@@ -227,21 +227,21 @@ class MPE_ACNetwork(torch.nn.Module):
 
         self.actor = torch.nn.Sequential(
             torch.nn.Linear(6 * n_agents, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, action_dim),
         )
 
         self.critic = torch.nn.Sequential(
             torch.nn.Linear(6 * n_agents * n_agents, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
+            torch.nn.ReLU(),
             torch.nn.Linear(64, 1),
         )
 

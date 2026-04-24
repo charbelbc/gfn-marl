@@ -169,7 +169,7 @@ def train_mpe(
     episode = 0
     reward_norm = Normalization(1)
 
-    while episode < 4_000_000:
+    while (episode * config.episode_length) < 4_000_000:
 
         obs = env.reset()
         dones = torch.zeros(batch_size, dtype=bool)
@@ -219,5 +219,5 @@ def train_mpe(
                 step=episode * config.episode_length,
             )
             # print(episode, curr_reward)
-            if episode % 100_000 == 0:
+            if episode % (100 * batch_size) == 0:
                 torch.save(agent.policy.state_dict(), "model")
