@@ -9,6 +9,7 @@ class Config:
     num_agents: int = 3
     num_landmarks: int = 3
     episode_length: int = 25
+    batch_size: int = 32
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
@@ -18,7 +19,6 @@ class Config:
     n_agents: int = 2
     action_dim: int = 5
     max_steps: int = 50
-    batch_size: int = 20
 
     # Models parameters
     memory_size: int = 512
