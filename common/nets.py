@@ -254,3 +254,43 @@ class MPE_ACNetwork(torch.nn.Module):
         value = self.critic(observations.flatten(1))
 
         return actor_logits, value
+
+
+class MPE_RNN_ACNetwork(torch.nn.Module):
+
+    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+        super().__init__()
+        self.action_dim = action_dim
+
+        self.actor_1 = torch.nn.Linear(6 * n_agents, 64)
+        self.actor_rnn = torch.nn.GRUCell(64, 64)
+        self.actor_2 = torch.nn.Linear(64, action_dim)
+
+        self.critic_1 = torch.nn.Linear(6 * n_agents * n_agents, 64)
+        self.critic_rnn = torch.nn.GRUCell(64, 64)
+        self.critic_2 = torch.nn.Linear(64, 1)
+
+        self.activation = torch.nn.Tanh()
+
+        self.actor_rnn_hidden = None
+        self.critic_rnn_hidden = None
+
+        orthogonal_init(self.actor_1)
+        orthogonal_init(self.actor_rnn)
+        orthogonal_init(self.actor_2, gain=0.01)
+        orthogonal_init(self.critic_1)
+        orthogonal_init(self.critic_rnn)
+        orthogonal_init(self.critic_2, gain=0.01)
+
+    def forward(self, observations):
+
+        batch, agents, features = observations.shape
+        x = self.activation(self.actor_1(observations.flatten(0, 1)))
+        self.actor_rnn_hidden = self.actor_rnn(x)
+        actor_logits = self.actor_2(self.actor_rnn_hidden)
+
+        y = self.activation(self.critic_1(observations.flatten(1)))
+        self.critic_rnn_hidden = self.critic_rnn(y)
+        value = self.critic_2(self.critic_rnn_hidden)
+
+        return actor_logits.reshape(batch, agents, -1), value.reshape(batch, -1)

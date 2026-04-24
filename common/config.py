@@ -10,6 +10,7 @@ class Config:
     num_landmarks: int = 3
     episode_length: int = 25
     batch_size: int = 32
+    use_rnn: float = True
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6

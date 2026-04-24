@@ -157,6 +157,7 @@ def train_mpe(
         eps_clip=config.eps_clip,
         lr=config.lr,
         action_dim=config.action_dim,
+        use_rnn=config.use_rnn,
     )
     buffer = MPE_ReplayBuffer(
         batch_size=batch_size,
@@ -210,6 +211,7 @@ def train_mpe(
 
         lr_now = config.lr * (1 - (episode * config.episode_length) / 3_000_000)
         agent.optimizer.param_groups[0]["lr"] = lr_now
+        print("x")
 
         if logging:
             wandb.log(

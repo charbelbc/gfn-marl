@@ -1,6 +1,11 @@
 import torch
 import numpy as np
-from common.nets import ACNetwork, InstructionsPreprocessor, MPE_ACNetwork
+from common.nets import (
+    ACNetwork,
+    InstructionsPreprocessor,
+    MPE_ACNetwork,
+    MPE_RNN_ACNetwork,
+)
 from common.utils import ReplayBuffer
 
 
@@ -189,6 +194,7 @@ class MPE_MAPPO:
         eps_clip: float = 0.2,
         lr: float = 0.001,
         action_dim: int = 5,
+        use_rnn: bool = False,
     ):
 
         self.n_agents = n_agents
@@ -198,10 +204,16 @@ class MPE_MAPPO:
         self.ppo_epochs = ppo_epochs
         self.eps_clip = eps_clip
         self.action_dim = action_dim
+        self.use_rnn = use_rnn
 
-        self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
-            self.device
-        )
+        if self.use_rnn:
+            self.policy = MPE_RNN_ACNetwork(
+                action_dim=action_dim, n_agents=n_agents
+            ).to(self.device)
+        else:
+            self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
+                self.device
+            )
         self.policy.train()
         self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
 
@@ -278,9 +290,20 @@ class MPE_MAPPO:
 
         for _ in range(self.ppo_epochs):
 
-            logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
-            logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
-            values_now = values_now.reshape(batch, max_T)
+            if self.use_rnn:
+                self.policy.actor_rnn_hidden = None
+                self.policy.critic_rnn_hidden = None
+                logits_now, values_now = [], []
+                for t in range(max_T):
+                    logits, value = self.policy(old_states[:, t].float())
+                    logits_now.append(logits)
+                    values_now.append(value)
+                logits_now = torch.stack(logits_now, dim=1)
+                values_now = torch.stack(values_now, dim=1).squeeze(-1)
+            else:
+                logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
+                logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
+                values_now = values_now.reshape(batch, max_T)
             logits_now = torch.cat(
                 [logits_now[i, : lengths[i]] for i in range(len(lengths))],
                 dim=0,
