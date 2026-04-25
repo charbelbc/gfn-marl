@@ -348,10 +348,10 @@ class MPE_MAPPO:
             value_loss = torch.max(value_surr1, value_surr2).mean()
             # value_loss = (values_now - returns).pow(2).mean()
 
-            loss = policy_loss + 0.5 * value_loss - 0.01 * entropy.mean()
+            loss = policy_loss + 0.5 * value_loss - 0.01 * entropy.mean(1).mean()
 
             self.optimizer.zero_grad()
-            loss.mean().backward()
+            loss.backward()
             # torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
             torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
             self.optimizer.step()
@@ -359,6 +359,6 @@ class MPE_MAPPO:
         losses = {
             "actor_loss": policy_loss.item(),
             "critic_loss": value_loss.item(),
-            "entropy": entropy.mean().item(),
+            "entropy": entropy.mean(1).mean().item(),
         }
         return losses
