@@ -263,11 +263,11 @@ class MPE_Actor(torch.nn.Module):
         self.action_dim = action_dim
         self.actor = torch.nn.Sequential(
             torch.nn.Linear(6 * n_agents, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, action_dim),
         )
         orthogonal_init(self.actor)
@@ -284,11 +284,11 @@ class MPE_Critic(torch.nn.Module):
         self.action_dim = action_dim
         self.critic = torch.nn.Sequential(
             torch.nn.Linear(6 * n_agents * n_agents, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
+            torch.nn.Tanh(),
             torch.nn.Linear(64, 1),
         )
         orthogonal_init(self.critic)
