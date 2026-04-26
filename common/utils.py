@@ -135,9 +135,11 @@ class MPE_ReplayBuffer:
             ),
             "actions": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "log_probs": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "rewards": np.empty([self.batch_size, self.ep_limit]),
-            "state_values": np.empty([self.batch_size, self.ep_limit + 1]),
-            "is_terminals": np.empty([self.batch_size, self.ep_limit]),
+            "rewards": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
+            "state_values": np.empty(
+                [self.batch_size, self.ep_limit + 1, self.n_agents]
+            ),
+            "is_terminals": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "lengths": np.empty([self.batch_size]),
         }
 

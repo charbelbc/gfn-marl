@@ -190,9 +190,9 @@ def train_mpe(
         while not doness.all():
             actions, logits, value = agent.select_action(obs)
             next_obs = env.step(actions.cpu())
-            rewards = torch.tensor([o[1][0] for o in next_obs])
+            rewards = torch.stack([torch.tensor(o[1]).squeeze() for o in next_obs])
             normalized_rewards = reward_norm(rewards)
-            dones = torch.tensor([o[2][0] for o in next_obs])
+            dones = torch.stack([torch.tensor(o[2]).squeeze() for o in next_obs])
             buffer.store_transition(
                 step,
                 obs,
@@ -207,7 +207,7 @@ def train_mpe(
             curr_reward += rewards.mean().item()
             obs = [o[0] for o in next_obs]
             for e in range(batch_size):
-                if dones[e] and not doness[e]:
+                if dones[e][0] and not doness[e]:
                     doness[e] = True
                     buffer.buffer["lengths"][e] = step
                     _, _, value = agent.select_action(obs)

@@ -294,7 +294,7 @@ class MPE_Critic(torch.nn.Module):
         orthogonal_init(self.critic)
 
     def forward(self, observations):
-        value = self.critic(observations.flatten(1))
+        value = self.critic(observations)
         return value
 
 
