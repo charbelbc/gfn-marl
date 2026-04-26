@@ -251,25 +251,35 @@ class MPE_MAPPO:
         rewards = torch.tensor(buffer.buffer["rewards"])
         values = torch.tensor(buffer.buffer["state_values"]).detach()
         dones = torch.tensor(buffer.buffer["is_terminals"])
-        lengths = torch.tensor(buffer.buffer["lengths"]).int() + 1
-        advantages = torch.zeros_like(rewards)
-        returns = torch.zeros_like(rewards)
         batch, max_T, _ = rewards.shape
-        for e in range(batch):
-            done_idx = torch.where(dones[e])[0]
-            if len(done_idx) > 0:
-                L = done_idx[0].item() + 1
-            else:
-                L = max_T
-            r = rewards[e, :L]
-            v = values[e, : L + 1]
-            d = dones[e, :L]
-            gae = 0
-            for t in reversed(range(L)):
-                delta = r[t] + self.gamma * v[t + 1] * (1 - d[t]) - v[t]
-                gae = delta + self.gaelambda * self.gamma * (1 - d[t]) * gae
-                advantages[e, t] = gae
-            returns[e, :L] = advantages[e, :L] + values[e, :L]
+
+        advantages = []
+        gae = 0
+        with torch.no_grad():
+            deltas = rewards + self.gamma * values[:, 1:] * (1 - dones) - values[:, :-1]
+            for t in reversed(range(max_T)):
+                gae = deltas[:, t] + self.gamma * self.gaelambda * gae
+                advantages.insert(0, gae)
+            advantages = torch.stack(advantages, dim=1)
+            returns = advantages + values[:, :-1]
+        # advantages = torch.zeros_like(rewards)
+        # returns = torch.zeros_like(rewards)
+        # batch, max_T, _ = rewards.shape
+        # for e in range(batch):
+        #     done_idx = torch.where(dones[e])[0]
+        #     if len(done_idx) > 0:
+        #         L = done_idx[0].item() + 1
+        #     else:
+        #         L = max_T
+        #     r = rewards[e, :L]
+        #     v = values[e, : L + 1]
+        #     d = dones[e, :L]
+        #     gae = 0
+        #     for t in reversed(range(L)):
+        #         delta = r[t] + self.gamma * v[t + 1] * (1 - d[t]) - v[t]
+        #         gae = delta + self.gaelambda * self.gamma * (1 - d[t]) * gae
+        #         advantages[e, t] = gae
+        #     returns[e, :L] = advantages[e, :L] + values[e, :L]
         # advantages = torch.cat([advantages[e, : lengths[e]] for e in range(batch)]).to(
         #     self.device
         # )
