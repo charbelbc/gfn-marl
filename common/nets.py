@@ -326,7 +326,7 @@ class MPE_RNN_Actor(torch.nn.Module):
         self.actor_rnn_hidden = self.actor_rnn(x)
         actor_logits = self.actor_3(self.actor_rnn_hidden)
 
-        return actor_logits.reshape(batch, agents, -1)
+        return actor_logits.reshape(batch, agents, -1).log_softmax(-1)
 
 
 class MPE_RNN_Critic(torch.nn.Module):
