@@ -193,10 +193,46 @@ def train_mpe(
                     "reward": curr_reward,
                 }
             )
+            if episode % (50 * batch_size) == 0:
+                test_reward = test_mpe(agent, env, config)
+                loss_dict.update({"test_reward": test_reward})
+                torch.save(agent.actor.state_dict(), "model")
             wandb.log(
                 loss_dict,
                 step=episode * config.episode_length,
             )
-            # print(episode, curr_reward)
-            if episode % (100 * batch_size) == 0:
-                torch.save(agent.actor.state_dict(), "model")
+
+
+def test_mpe(agent, env, config):
+
+    obs = env.reset()
+    batch_size = config.batch_size
+    dones = torch.zeros(batch_size, dtype=bool)
+    doness = dones.clone()
+    step = 0
+    curr_reward = 0.0
+    if config.use_rnn:
+        agent.actor.actor_rnn_hidden = None
+        agent.critic.critic_rnn_hidden = None
+
+    while not doness.all():
+        _, logits, _ = agent.select_action(obs)
+        actions = torch.nn.functional.one_hot(
+            logits.softmax(-1)
+            .argmax(-1)
+            .unsqueeze(-1)
+            .flatten(0, 1)
+            .reshape(obs.shape[0], obs.shape[1]),
+            5,
+        )
+        next_obs = env.step(actions.cpu())
+        rewards = torch.stack([torch.tensor(o[1]).squeeze() for o in next_obs])
+        dones = torch.stack([torch.tensor(o[2]).squeeze() for o in next_obs])
+
+        curr_reward += rewards.mean().item()
+        obs = [o[0] for o in next_obs]
+        for e in range(batch_size):
+            if dones[e][0] and not doness[e]:
+                doness[e] = True
+        step += 1
+    return curr_reward
