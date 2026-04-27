@@ -9,9 +9,9 @@ class Config:
     num_agents: int = 3
     num_landmarks: int = 3
     episode_length: int = 25
-    batch_size: int = 64
-    minibatch_size: int = 64
-    use_rnn: float = False
+    batch_size: int = 256
+    minibatch_size: int = 256
+    use_rnn: float = True
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
