@@ -270,8 +270,8 @@ class MPE_Actor(torch.nn.Module):
             # torch.nn.Tanh(),
             torch.nn.Linear(64, action_dim),
         )
-        orthogonal_init(self.actor[0], gain=0.01)
-        orthogonal_init(self.actor[2], gain=0.01)
+        orthogonal_init(self.actor[0])
+        orthogonal_init(self.actor[2])
         orthogonal_init(self.actor[4], gain=0.01)
 
     def forward(self, observations):
@@ -293,7 +293,7 @@ class MPE_Critic(torch.nn.Module):
             # torch.nn.Tanh(),
             torch.nn.Linear(64, 1),
         )
-        orthogonal_init(self.critic, gain=0.01)
+        orthogonal_init(self.critic)
 
     def forward(self, observations):
         value = self.critic(observations)
