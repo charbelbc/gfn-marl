@@ -359,9 +359,9 @@ class MPE_MAPPO:
                 # )
 
                 distribution_now = torch.distributions.Categorical(logits=logits_now)
-                logprobs_now = distribution_now.log_prob(old_actions)
+                logprobs_now = distribution_now.log_prob(old_actions[index])
                 entropy = distribution_now.entropy()
-                ratios = torch.exp(logprobs_now - old_logprobs)
+                ratios = torch.exp(logprobs_now - old_logprobs[index])
 
                 surr1 = ratios * advantages[index]
                 surr2 = (

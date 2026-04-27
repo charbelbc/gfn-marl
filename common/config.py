@@ -9,7 +9,7 @@ class Config:
     num_agents: int = 3
     num_landmarks: int = 3
     episode_length: int = 25
-    batch_size: int = 128
+    batch_size: int = 32
     minibatch_size: int = 2
     use_rnn: float = False
 
