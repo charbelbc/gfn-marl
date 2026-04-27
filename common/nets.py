@@ -276,7 +276,7 @@ class MPE_Actor(torch.nn.Module):
 
     def forward(self, observations):
         actor_logits = self.actor(observations)
-        return actor_logits
+        return actor_logits.log_softmax(-1)
 
 
 class MPE_Critic(torch.nn.Module):
