@@ -323,6 +323,11 @@ class MPE_MAPPO:
         returns = self.value_norm.normalize(returns).to(self.device)
         # old_values = values[:, :-1].to(self.device)
         # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        old_states = torch.tensor(buffer.buffer["states"])[index].to(self.device)
+        old_actions = torch.tensor(buffer.buffer["actions"])[index].to(self.device)
+        old_logprobs = (
+            torch.tensor(buffer.buffer["log_probs"])[index].detach().to(self.device)
+        )
 
         for _ in range(self.ppo_epochs):
 
@@ -332,26 +337,14 @@ class MPE_MAPPO:
                 False,
             ):
 
-                old_states = torch.tensor(buffer.buffer["states"])[index].to(
-                    self.device
-                )
-                old_actions = torch.tensor(buffer.buffer["actions"])[index].to(
-                    self.device
-                )
-                old_logprobs = (
-                    torch.tensor(buffer.buffer["log_probs"])[index]
-                    .detach()
-                    .to(self.device)
-                )
-
                 if self.use_rnn:
                     self.actor.actor_rnn_hidden = None
                     self.critic.critic_rnn_hidden = None
                     logits_now, values_now = [], []
                     for t in range(max_T):
-                        logits = self.actor(old_states[:, t].float())
+                        logits = self.actor(old_states[index, t].float())
                         value = self.critic(
-                            old_states[:, t]
+                            old_states[index, t]
                             .flatten(1)
                             .unsqueeze(1)
                             .repeat(1, self.n_agents, 1)

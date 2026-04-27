@@ -194,8 +194,8 @@ def train_mpe(
                 }
             )
             if episode % (50 * batch_size) == 0:
-                test_reward = test_mpe(agent, env, config)
-                loss_dict.update({"test_reward": test_reward})
+                # test_reward = test_mpe(agent, env, config)
+                # loss_dict.update({"test_reward": test_reward})
                 torch.save(agent.actor.state_dict(), "model")
             wandb.log(
                 loss_dict,
