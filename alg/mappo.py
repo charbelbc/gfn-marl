@@ -185,6 +185,49 @@ class MAPPO:
             self.optimizer.step()
 
 
+class ValueNormalizer:
+    def __init__(self, epsilon=1e-5, clip_range=10.0):
+        self.mean = 0.0
+        self.var = 1.0
+        self.count = epsilon
+        self.clip_range = clip_range
+
+    def update(self, values: torch.Tensor):
+        batch_mean = values.mean().item()
+        batch_var = values.var(unbiased=False).item()
+        batch_count = values.numel()
+
+        self._update_from_moments(batch_mean, batch_var, batch_count)
+
+    def _update_from_moments(self, mean, var, count):
+        delta = mean - self.mean
+        tot_count = self.count + count
+
+        new_mean = self.mean + delta * count / tot_count
+
+        m_a = self.var * self.count
+        m_b = var * count
+        M2 = m_a + m_b + delta**2 * self.count * count / tot_count
+
+        new_var = M2 / tot_count
+
+        self.mean = new_mean
+        self.var = new_var
+        self.count = tot_count
+
+    @property
+    def std(self):
+        return (self.var + 1e-8) ** 0.5
+
+    def normalize(self, values):
+        return torch.clamp(
+            (values - self.mean) / self.std, -self.clip_range, self.clip_range
+        )
+
+    def denormalize(self, values):
+        return values * self.std + self.mean
+
+
 class MPE_MAPPO:
 
     def __init__(
@@ -237,6 +280,7 @@ class MPE_MAPPO:
         # self.policy.train()
         # self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
         self.optimizer = torch.optim.Adam(self.ac_parameters, lr=lr, eps=1e-5)
+        self.value_norm = ValueNormalizer()
 
     def select_action(self, obs):
 
@@ -259,6 +303,7 @@ class MPE_MAPPO:
 
         rewards = torch.tensor(buffer.buffer["rewards"])
         values = torch.tensor(buffer.buffer["state_values"]).detach()
+        values = self.value_norm.denormalize(values)
         dones = torch.tensor(buffer.buffer["is_terminals"])
         batch, max_T, _ = rewards.shape
 
@@ -272,10 +317,11 @@ class MPE_MAPPO:
             advantages = torch.stack(advantages, dim=1)
             returns = advantages + values[:, :-1]
 
+        self.value_norm.update(returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
         advantages = advantages.to(self.device)
-        returns = returns.to(self.device)
-        old_values = values[:, :-1].to(self.device)
+        returns = self.value_norm.normalize(returns).to(self.device)
+        # old_values = values[:, :-1].to(self.device)
         # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         for _ in range(self.ppo_epochs):
