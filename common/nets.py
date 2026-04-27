@@ -307,21 +307,24 @@ class MPE_RNN_Actor(torch.nn.Module):
         self.action_dim = action_dim
 
         self.actor_1 = torch.nn.Linear(6 * n_agents, 64)
+        self.actor_2 = torch.nn.Linear(64, 64)
         self.actor_rnn = torch.nn.GRUCell(64, 64)
-        self.actor_2 = torch.nn.Linear(64, action_dim)
+        self.actor_3 = torch.nn.Linear(64, action_dim)
         self.activation = torch.nn.Tanh()
         self.actor_rnn_hidden = None
 
         orthogonal_init(self.actor_1)
+        orthogonal_init(self.actor_2)
         orthogonal_init(self.actor_rnn)
-        orthogonal_init(self.actor_2, gain=0.01)
+        orthogonal_init(self.actor_3, gain=0.01)
 
     def forward(self, observations):
 
         batch, agents, features = observations.shape
         x = self.activation(self.actor_1(observations.flatten(0, 1)))
+        x = self.activation(self.actor_2(x))
         self.actor_rnn_hidden = self.actor_rnn(x)
-        actor_logits = self.actor_2(self.actor_rnn_hidden)
+        actor_logits = self.actor_3(self.actor_rnn_hidden)
 
         return actor_logits.reshape(batch, agents, -1)
 
@@ -333,20 +336,23 @@ class MPE_RNN_Critic(torch.nn.Module):
         self.action_dim = action_dim
 
         self.critic_1 = torch.nn.Linear(6 * n_agents * n_agents, 64)
+        self.critic_2 = torch.nn.Linear(64, 64)
         self.critic_rnn = torch.nn.GRUCell(64, 64)
-        self.critic_2 = torch.nn.Linear(64, 1)
+        self.critic_3 = torch.nn.Linear(64, 1)
         self.activation = torch.nn.Tanh()
         self.critic_rnn_hidden = None
 
         orthogonal_init(self.critic_1)
+        orthogonal_init(self.critic_2)
         orthogonal_init(self.critic_rnn)
-        orthogonal_init(self.critic_2, gain=0.01)
+        orthogonal_init(self.critic_3)
 
     def forward(self, observations):
 
         batch, agents, features = observations.shape
         y = self.activation(self.critic_1(observations.flatten(0, 1)))
+        y = self.activation(self.critic_2(y))
         self.critic_rnn_hidden = self.critic_rnn(y)
-        value = self.critic_2(self.critic_rnn_hidden)
+        value = self.critic_3(self.critic_rnn_hidden)
 
         return value.reshape(batch, agents, -1)
