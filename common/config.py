@@ -11,7 +11,7 @@ class Config:
     episode_length: int = 25
     batch_size: int = 512
     minibatch_size: int = 512
-    use_rnn: float = False
+    use_rnn: float = True
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6

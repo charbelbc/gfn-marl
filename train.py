@@ -141,7 +141,7 @@ def train_mpe(
     episode = 0
     reward_norm = Normalization(config.num_agents)
 
-    while (episode * config.episode_length) < 20_000_000:
+    while (episode * config.episode_length) < 5_000_000:
 
         obs = env.reset()
         dones = torch.zeros(batch_size, dtype=bool)
@@ -176,14 +176,14 @@ def train_mpe(
                     doness[e] = True
                     buffer.buffer["lengths"][e] = step
                     _, _, value = agent.select_action(obs)
-                    buffer.buffer["state_values"][e] = value[e].cpu()
+                    buffer.buffer["state_values"][e, -1] = value[e].cpu()
             step += 1
 
         loss_dict = agent.update(buffer)
         buffer.reset_buffer()
         episode += batch_size
 
-        lr_now = config.lr * (1 - (episode * config.episode_length) / 20_000_000)
+        lr_now = config.lr * (1 - (episode * config.episode_length) / 5_000_000)
         agent.optimizer.param_groups[0]["lr"] = lr_now
         # print(episode, curr_reward)
 

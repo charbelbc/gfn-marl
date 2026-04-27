@@ -303,7 +303,7 @@ class MPE_MAPPO:
 
         rewards = torch.tensor(buffer.buffer["rewards"])
         values = torch.tensor(buffer.buffer["state_values"]).detach()
-        values = self.value_norm.denormalize(values)
+        # values = self.value_norm.denormalize(values)
         dones = torch.tensor(buffer.buffer["is_terminals"])
         batch, max_T, _ = rewards.shape
 
@@ -317,10 +317,11 @@ class MPE_MAPPO:
             advantages = torch.stack(advantages, dim=1)
             returns = advantages + values[:, :-1]
 
-        self.value_norm.update(returns)
+        # self.value_norm.update(returns)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
         advantages = advantages.to(self.device)
-        returns = self.value_norm.normalize(returns).to(self.device)
+        # returns = self.value_norm.normalize(returns).to(self.device)
+        returns = returns.to(self.device)
         # old_values = values[:, :-1].to(self.device)
         # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
