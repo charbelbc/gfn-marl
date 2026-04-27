@@ -271,60 +271,12 @@ class MPE_MAPPO:
                 advantages.insert(0, gae)
             advantages = torch.stack(advantages, dim=1)
             returns = advantages + values[:, :-1]
-        # advantages = torch.zeros_like(rewards)
-        # returns = torch.zeros_like(rewards)
-        # batch, max_T, _ = rewards.shape
-        # for e in range(batch):
-        #     done_idx = torch.where(dones[e])[0]
-        #     if len(done_idx) > 0:
-        #         L = done_idx[0].item() + 1
-        #     else:
-        #         L = max_T
-        #     r = rewards[e, :L]
-        #     v = values[e, : L + 1]
-        #     d = dones[e, :L]
-        #     gae = 0
-        #     for t in reversed(range(L)):
-        #         delta = r[t] + self.gamma * v[t + 1] * (1 - d[t]) - v[t]
-        #         gae = delta + self.gaelambda * self.gamma * (1 - d[t]) * gae
-        #         advantages[e, t] = gae
-        #     returns[e, :L] = advantages[e, :L] + values[e, :L]
-        # advantages = torch.cat([advantages[e, : lengths[e]] for e in range(batch)]).to(
-        #     self.device
-        # )
-        # returns = torch.cat([returns[e, : lengths[e]] for e in range(batch)]).to(
-        #     self.device
-        # )
-        # old_values = (
-        #     torch.cat([values[e, : lengths[e]] for e in range(batch)])
-        #     .to(self.device)
-        #     .detach()
-        # )
+
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
         advantages = advantages.to(self.device)
         returns = returns.to(self.device)
         old_values = values[:, :-1].to(self.device)
         returns = (returns - returns.mean()) / (returns.std() + 1e-7)
-
-        old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
-        # old_actions = torch.cat(
-        #     [
-        #         torch.tensor(buffer.buffer["actions"][e, : lengths[e]])
-        #         for e in range(batch)
-        #     ]
-        # ).to(self.device)
-        old_actions = torch.tensor(buffer.buffer["actions"]).to(self.device)
-        # old_logprobs = (
-        #     torch.cat(
-        #         [
-        #             torch.tensor(buffer.buffer["log_probs"][e, : lengths[e]])
-        #             for e in range(batch)
-        #         ]
-        #     )
-        #     .detach()
-        #     .to(self.device)
-        # )
-        old_logprobs = torch.tensor(buffer.buffer["log_probs"]).detach().to(self.device)
 
         for _ in range(self.ppo_epochs):
 
@@ -334,14 +286,26 @@ class MPE_MAPPO:
                 False,
             ):
 
+                old_states = torch.tensor(buffer.buffer["states"])[index].to(
+                    self.device
+                )
+                old_actions = torch.tensor(buffer.buffer["actions"])[index].to(
+                    self.device
+                )
+                old_logprobs = (
+                    torch.tensor(buffer.buffer["log_probs"])[index]
+                    .detach()
+                    .to(self.device)
+                )
+
                 if self.use_rnn:
                     self.actor.actor_rnn_hidden = None
                     self.critic.critic_rnn_hidden = None
                     logits_now, values_now = [], []
                     for t in range(max_T):
-                        logits = self.actor(old_states[index, t].float())
+                        logits = self.actor(old_states[:, t].float())
                         value = self.critic(
-                            old_states[index, t]
+                            old_states[:, t]
                             .flatten(1)
                             .unsqueeze(1)
                             .repeat(1, self.n_agents, 1)
@@ -373,9 +337,9 @@ class MPE_MAPPO:
                 # )
 
                 distribution_now = torch.distributions.Categorical(logits=logits_now)
-                logprobs_now = distribution_now.log_prob(old_actions[index])
+                logprobs_now = distribution_now.log_prob(old_actions)
                 entropy = distribution_now.entropy()
-                ratios = torch.exp(logprobs_now - old_logprobs[index])
+                ratios = torch.exp(logprobs_now - old_logprobs)
 
                 surr1 = ratios * advantages[index]
                 surr2 = (
