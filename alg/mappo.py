@@ -4,7 +4,8 @@ from common.nets import (
     ACNetwork,
     InstructionsPreprocessor,
     MPE_ACNetwork,
-    MPE_RNN_ACNetwork,
+    MPE_RNN_Actor,
+    MPE_RNN_Critic,
     MPE_Actor,
     MPE_Critic,
 )
@@ -211,9 +212,15 @@ class MPE_MAPPO:
         self.minibatch_size = minibatch_size
 
         if self.use_rnn:
-            self.policy = MPE_RNN_ACNetwork(
-                action_dim=action_dim, n_agents=n_agents
-            ).to(self.device)
+            self.actor = MPE_RNN_Actor(action_dim=action_dim, n_agents=n_agents).to(
+                self.device
+            )
+            self.critic = MPE_RNN_Critic(action_dim=action_dim, n_agents=n_agents).to(
+                self.device
+            )
+            self.ac_parameters = list(self.actor.parameters()) + list(
+                self.critic.parameters()
+            )
         else:
             # self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
             #     self.device
@@ -328,11 +335,18 @@ class MPE_MAPPO:
             ):
 
                 if self.use_rnn:
-                    self.policy.actor_rnn_hidden = None
-                    self.policy.critic_rnn_hidden = None
+                    self.actor.actor_rnn_hidden = None
+                    self.critic.critic_rnn_hidden = None
                     logits_now, values_now = [], []
                     for t in range(max_T):
-                        logits, value = self.policy(old_states[:, t].float())
+                        logits = self.actor(old_states[index, t].float())
+                        value = self.critic(
+                            old_states[index, t]
+                            .flatten(1)
+                            .unsqueeze(1)
+                            .repeat(1, self.n_agents, 1)
+                            .float()
+                        ).squeeze(-1)
                         logits_now.append(logits)
                         values_now.append(value)
                     logits_now = torch.stack(logits_now, dim=1)
