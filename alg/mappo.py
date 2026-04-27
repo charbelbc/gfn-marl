@@ -323,11 +323,9 @@ class MPE_MAPPO:
         returns = self.value_norm.normalize(returns).to(self.device)
         # old_values = values[:, :-1].to(self.device)
         # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
-        old_states = torch.tensor(buffer.buffer["states"])[index].to(self.device)
-        old_actions = torch.tensor(buffer.buffer["actions"])[index].to(self.device)
-        old_logprobs = (
-            torch.tensor(buffer.buffer["log_probs"])[index].detach().to(self.device)
-        )
+        old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
+        old_actions = torch.tensor(buffer.buffer["actions"]).to(self.device)
+        old_logprobs = torch.tensor(buffer.buffer["log_probs"]).detach().to(self.device)
 
         for _ in range(self.ppo_epochs):
 
