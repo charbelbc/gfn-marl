@@ -394,7 +394,7 @@ class MPE_MAPPO:
                 # value_loss = torch.max(value_surr1, value_surr2).mean()
                 # value_loss = (values_now - returns[index]).pow(2)
                 value_loss = torch.nn.functional.smooth_l1_loss(
-                    values_now, returns[index], reduction="none"
+                    values_now, returns[index], reduction="none", beta=10.0
                 )
 
                 loss = policy_loss.mean() + 0.5 * value_loss.mean()

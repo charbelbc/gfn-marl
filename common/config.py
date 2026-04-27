@@ -9,9 +9,9 @@ class Config:
     num_agents: int = 3
     num_landmarks: int = 3
     episode_length: int = 25
-    batch_size: int = 512
-    minibatch_size: int = 512
-    use_rnn: float = True
+    batch_size: int = 64
+    minibatch_size: int = 64
+    use_rnn: float = False
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
@@ -30,4 +30,4 @@ class Config:
     gaelambda: float = 0.95
     ppo_epochs: int = 10
     eps_clip: float = 0.2
-    lr: float = 0.0007
+    lr: float = 0.0005
