@@ -167,6 +167,7 @@ def train_mpe(
         lr=config.lr,
         action_dim=config.action_dim,
         use_rnn=config.use_rnn,
+        minibatch_size=config.minibatch_size,
     )
     buffer = MPE_ReplayBuffer(
         batch_size=batch_size,

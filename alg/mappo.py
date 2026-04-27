@@ -197,6 +197,7 @@ class MPE_MAPPO:
         lr: float = 0.001,
         action_dim: int = 5,
         use_rnn: bool = False,
+        minibatch_size: int = 8,
     ):
 
         self.n_agents = n_agents
@@ -207,6 +208,7 @@ class MPE_MAPPO:
         self.eps_clip = eps_clip
         self.action_dim = action_dim
         self.use_rnn = use_rnn
+        self.minibatch_size = minibatch_size
 
         if self.use_rnn:
             self.policy = MPE_RNN_ACNetwork(
@@ -295,7 +297,7 @@ class MPE_MAPPO:
         advantages = advantages.to(self.device)
         returns = returns.to(self.device)
         old_values = values[:, :-1].to(self.device)
-        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         # old_actions = torch.cat(
@@ -319,62 +321,70 @@ class MPE_MAPPO:
 
         for _ in range(self.ppo_epochs):
 
-            if self.use_rnn:
-                self.policy.actor_rnn_hidden = None
-                self.policy.critic_rnn_hidden = None
-                logits_now, values_now = [], []
-                for t in range(max_T):
-                    logits, value = self.policy(old_states[:, t].float())
-                    logits_now.append(logits)
-                    values_now.append(value)
-                logits_now = torch.stack(logits_now, dim=1)
-                values_now = torch.stack(values_now, dim=1).squeeze(-1)
-            else:
-                # logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
-                logits_now = self.actor(old_states.float())
-                values_now = self.critic(
-                    old_states.flatten(2)
-                    .unsqueeze(2)
-                    .repeat(1, 1, self.n_agents, 1)
-                    .float()
-                ).squeeze(-1)
-                # logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
-                # values_now = values_now.reshape(batch, max_T)
-            # logits_now = torch.cat(
-            #     [logits_now[i, : lengths[i]] for i in range(len(lengths))],
-            #     dim=0,
-            # )
-            # values_now = torch.cat(
-            #     [values_now[i, : lengths[i]] for i in range(len(lengths))],
-            #     dim=0,
-            # )
+            for index in torch.utils.data.sampler.BatchSampler(
+                torch.utils.data.sampler.SequentialSampler(range(batch)),
+                self.minibatch_size,
+                False,
+            ):
 
-            distribution_now = torch.distributions.Categorical(logits=logits_now)
-            logprobs_now = distribution_now.log_prob(old_actions)
-            entropy = distribution_now.entropy()
-            ratios = torch.exp(logprobs_now - old_logprobs)
+                if self.use_rnn:
+                    self.policy.actor_rnn_hidden = None
+                    self.policy.critic_rnn_hidden = None
+                    logits_now, values_now = [], []
+                    for t in range(max_T):
+                        logits, value = self.policy(old_states[:, t].float())
+                        logits_now.append(logits)
+                        values_now.append(value)
+                    logits_now = torch.stack(logits_now, dim=1)
+                    values_now = torch.stack(values_now, dim=1).squeeze(-1)
+                else:
+                    # logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
+                    logits_now = self.actor(old_states[index].float())
+                    values_now = self.critic(
+                        old_states[index]
+                        .flatten(2)
+                        .unsqueeze(2)
+                        .repeat(1, 1, self.n_agents, 1)
+                        .float()
+                    ).squeeze(-1)
+                    # logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
+                    # values_now = values_now.reshape(batch, max_T)
+                # logits_now = torch.cat(
+                #     [logits_now[i, : lengths[i]] for i in range(len(lengths))],
+                #     dim=0,
+                # )
+                # values_now = torch.cat(
+                #     [values_now[i, : lengths[i]] for i in range(len(lengths))],
+                #     dim=0,
+                # )
 
-            surr1 = ratios * advantages
-            surr2 = (
-                torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip) * advantages
-            )
-            policy_loss = -torch.min(surr1, surr2) - 0.01 * entropy
+                distribution_now = torch.distributions.Categorical(logits=logits_now)
+                logprobs_now = distribution_now.log_prob(old_actions)
+                entropy = distribution_now.entropy()
+                ratios = torch.exp(logprobs_now - old_logprobs)
 
-            # value_clipped = old_values + torch.clamp(
-            #     values_now - old_values, -self.eps_clip, self.eps_clip
-            # )
-            # value_surr1 = (values_now - returns).pow(2)
-            # value_surr2 = (value_clipped - returns).pow(2)
-            # value_loss = torch.max(value_surr1, value_surr2).mean()
-            value_loss = (values_now - returns).pow(2)
+                surr1 = ratios * advantages[index]
+                surr2 = (
+                    torch.clamp(ratios, 1 - self.eps_clip, 1 + self.eps_clip)
+                    * advantages[index]
+                )
+                policy_loss = -torch.min(surr1, surr2) - 0.01 * entropy
 
-            loss = policy_loss.mean() + 0.5 * value_loss.mean()
+                # value_clipped = old_values + torch.clamp(
+                #     values_now - old_values, -self.eps_clip, self.eps_clip
+                # )
+                # value_surr1 = (values_now - returns).pow(2)
+                # value_surr2 = (value_clipped - returns).pow(2)
+                # value_loss = torch.max(value_surr1, value_surr2).mean()
+                value_loss = (values_now - returns[index]).pow(2)
 
-            self.optimizer.zero_grad()
-            loss.backward()
-            # torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
-            torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
-            self.optimizer.step()
+                loss = policy_loss.mean() + 0.5 * value_loss.mean()
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                # torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
+                torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
+                self.optimizer.step()
 
         losses = {
             "actor_loss": policy_loss.mean().item(),
