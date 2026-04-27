@@ -187,6 +187,9 @@ def train_mpe(
         doness = dones.clone()
         step = 0
         curr_reward = 0.0
+        if config.use_rnn:
+            agent.actor.actor_rnn_hidden = None
+            agent.critic.critic_rnn_hidden = None
 
         while not doness.all():
             actions, logits, value = agent.select_action(obs)
