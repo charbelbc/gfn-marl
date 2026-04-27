@@ -9,7 +9,7 @@ from common.nets import (
     MPE_Actor,
     MPE_Critic,
 )
-from common.utils import ReplayBuffer
+from common.utils import ReplayBuffer, Normalization
 
 
 class MAPPO:
@@ -276,7 +276,7 @@ class MPE_MAPPO:
         advantages = advantages.to(self.device)
         returns = returns.to(self.device)
         old_values = values[:, :-1].to(self.device)
-        returns = (returns - returns.mean()) / (returns.std() + 1e-7)
+        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
 
         for _ in range(self.ppo_epochs):
 
