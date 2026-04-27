@@ -222,7 +222,7 @@ def test_mpe(agent, env, config):
             .argmax(-1)
             .unsqueeze(-1)
             .flatten(0, 1)
-            .reshape(obs.shape[0], obs.shape[1]),
+            .reshape(batch_size, agent.n_agents),
             5,
         )
         next_obs = env.step(actions.cpu())
