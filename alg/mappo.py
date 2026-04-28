@@ -285,15 +285,19 @@ class MPE_MAPPO:
             # logits, value = self.policy(obs)
             logits = self.actor(obs)
             value = self.critic(obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1))
-            action = torch.nn.functional.one_hot(
-                logits.softmax(-1)
-                .flatten(0, 1)
-                .multinomial(1)
-                .reshape(obs.shape[0], obs.shape[1]),
-                5,
-            )
+            dist = torch.distributions.Categorical(logits=logits)
+            action = dist.sample()
+            logprobs = dist.log_prob(action)
+            action = torch.nn.functional.one_hot(action, 5)
+            # action = torch.nn.functional.one_hot(
+            #     logits.softmax(-1)
+            #     .flatten(0, 1)
+            #     .multinomial(1)
+            #     .reshape(obs.shape[0], obs.shape[1]),
+            #     5,
+            # )
 
-        return action, logits, value.squeeze()
+        return action, logprobs, value.squeeze()
 
     def update(self, buffer: ReplayBuffer):
 

@@ -14,7 +14,7 @@ class Config:
     minibatch_size: int = 1024
     use_rnn: float = True
     normalize_value: bool = True
-    value_clipping: bool = False
+    value_clipping: bool = True
 
     # PPO parameters
     gamma: float = 0.99

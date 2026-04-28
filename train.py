@@ -164,9 +164,7 @@ def train_mpe(
                 step,
                 obs,
                 actions.argmax(-1).cpu(),
-                torch.gather(logits, -1, actions.argmax(-1).unsqueeze(-1))
-                .squeeze()
-                .cpu(),
+                logits.cpu(),
                 value.squeeze().cpu(),
                 normalized_rewards.squeeze(),
                 dones,
