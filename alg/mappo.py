@@ -186,7 +186,7 @@ class MAPPO:
 
 
 class ValueNormalizer:
-    def __init__(self, shape=(), epsilon=1e-5, beta=0.999):
+    def __init__(self, shape=(), epsilon=1e-5, beta=0.99):
         self.running_mean = torch.zeros(shape).float()
         self.running_mean_squared = torch.zeros(shape).float()
         self.debiasing_term = torch.tensor([0.0])
@@ -408,5 +408,6 @@ class MPE_MAPPO:
             "actor_loss": policy_loss.mean().item(),
             "critic_loss": value_loss.mean().item(),
             "entropy": entropy.mean().item(),
+            "ratios": ratios.mean().item(),
         }
         return losses
