@@ -10,8 +10,8 @@ class Config:
     num_landmarks: int = 3
     episode_length: int = 25
     action_dim: int = 5
-    batch_size: int = 32
-    minibatch_size: int = 32
+    batch_size: int = 1024
+    minibatch_size: int = 1024
     use_rnn: float = True
     normalize_value: bool = True
     value_clipping: bool = False
