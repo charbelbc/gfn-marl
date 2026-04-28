@@ -313,6 +313,10 @@ class MPE_RNN_Actor(torch.nn.Module):
         self.actor_3 = torch.nn.Linear(64, action_dim)
         self.activation = torch.nn.Tanh()
         self.actor_rnn_hidden = None
+        self.feature_norm = torch.nn.LayerNorm(6 * n_agents)
+        self.norm_1 = torch.nn.LayerNorm(64)
+        self.norm_2 = torch.nn.LayerNorm(64)
+        self.norm_3 = torch.nn.LayerNorm(64)
 
         orthogonal_init(self.actor_1)
         orthogonal_init(self.actor_2)
@@ -322,10 +326,10 @@ class MPE_RNN_Actor(torch.nn.Module):
     def forward(self, observations):
 
         batch, agents, features = observations.shape
-        x = self.activation(self.actor_1(observations.flatten(0, 1)))
-        x = self.activation(self.actor_2(x))
-        self.actor_rnn_hidden = self.actor_rnn(x, self.actor_rnn_hidden)
-        actor_logits = self.actor_3(self.actor_rnn_hidden)
+        x = self.activation(self.actor_1(self.feature_norm(observations.flatten(0, 1))))
+        x = self.activation(self.actor_2(self.norm_1(x)))
+        self.actor_rnn_hidden = self.actor_rnn(self.norm_2(x), self.actor_rnn_hidden)
+        actor_logits = self.actor_3(self.norm_3(self.actor_rnn_hidden))
 
         return actor_logits.reshape(batch, agents, -1).log_softmax(-1)
 
@@ -342,6 +346,10 @@ class MPE_RNN_Critic(torch.nn.Module):
         self.critic_3 = torch.nn.Linear(64, 1)
         self.activation = torch.nn.Tanh()
         self.critic_rnn_hidden = None
+        self.feature_norm = torch.nn.LayerNorm(6 * n_agents * n_agents)
+        self.norm_1 = torch.nn.LayerNorm(64)
+        self.norm_2 = torch.nn.LayerNorm(64)
+        self.norm_3 = torch.nn.LayerNorm(64)
 
         orthogonal_init(self.critic_1)
         orthogonal_init(self.critic_2)
@@ -351,9 +359,11 @@ class MPE_RNN_Critic(torch.nn.Module):
     def forward(self, observations):
 
         batch, agents, features = observations.shape
-        y = self.activation(self.critic_1(observations.flatten(0, 1)))
-        y = self.activation(self.critic_2(y))
-        self.critic_rnn_hidden = self.critic_rnn(y, self.critic_rnn_hidden)
-        value = self.critic_3(self.critic_rnn_hidden)
+        y = self.activation(
+            self.critic_1(self.feature_norm(observations.flatten(0, 1)))
+        )
+        y = self.activation(self.critic_2(self.norm_1(y)))
+        self.critic_rnn_hidden = self.critic_rnn(self.norm_2(y), self.critic_rnn_hidden)
+        value = self.critic_3(self.norm_3(self.critic_rnn_hidden))
 
         return value.reshape(batch, agents, -1)

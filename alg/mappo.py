@@ -417,8 +417,6 @@ class MPE_MAPPO:
             "critic_loss": value_loss.mean().item(),
             "entropy": entropy.mean().item(),
             "ratios": ratios.mean().item(),
-            "adv_mean": advantages.mean().item(),
-            "adv_std": advantages.std().item(),
             "adv_abs_mean": advantages.abs().mean().item(),
             "actor_grad_norm": actor_grad_norm.item(),
             "critic_grad_norm": critic_grad_norm.item(),
