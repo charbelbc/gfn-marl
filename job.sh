@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=8000
-#SBATCH --time=00:30:00
+#SBATCH --time=03:00:00
 #SBATCH --gres=gpu:v100:1
 #SBATCH --output=logs/wireless.out
 #SBATCH --error=logs/wireless.err

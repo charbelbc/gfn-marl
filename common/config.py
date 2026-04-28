@@ -9,9 +9,9 @@ class Config:
     num_agents: int = 3
     num_landmarks: int = 3
     episode_length: int = 25
-    batch_size: int = 256
-    minibatch_size: int = 256
-    use_rnn: float = True
+    batch_size: int = 32
+    minibatch_size: int = 8
+    use_rnn: float = False
 
     env_name: str = "MultiGrid-TwoTasksEnv-v0"
     training_steps: int = 10 * 10**6
@@ -28,6 +28,6 @@ class Config:
     # PPO parameters
     gamma: float = 0.99
     gaelambda: float = 0.95
-    ppo_epochs: int = 10
+    ppo_epochs: int = 15
     eps_clip: float = 0.2
     lr: float = 0.0005
