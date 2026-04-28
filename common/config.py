@@ -12,9 +12,10 @@ class Config:
     action_dim: int = 5
     batch_size: int = 128
     minibatch_size: int = 128
-    use_rnn: float = True
+    use_rnn: float = False
     normalize_value: bool = True
     value_clipping: bool = False
+    reward_normalization: bool = False
 
     # PPO parameters
     gamma: float = 0.99

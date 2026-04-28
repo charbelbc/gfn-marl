@@ -143,7 +143,8 @@ def train_mpe(
     env = ParallelEnv(envs)
 
     episode = 0
-    reward_norm = Normalization(config.num_agents)
+    if config.reward_normalization:
+        reward_norm = Normalization(config.num_agents)
 
     while (episode * config.episode_length) < 5_000_000:
 
@@ -160,7 +161,8 @@ def train_mpe(
             actions, logits, value = agent.select_action(obs)
             next_obs = env.step(actions.cpu())
             rewards = torch.stack([torch.tensor(o[1]).squeeze() for o in next_obs])
-            normalized_rewards = reward_norm(rewards)
+            if config.reward_normalization:
+                normalized_rewards = reward_norm(rewards)
             dones = torch.stack([torch.tensor(o[2]).squeeze() for o in next_obs])
             buffer.store_transition(
                 step,
@@ -168,10 +170,14 @@ def train_mpe(
                 actions.cpu(),
                 logits.cpu(),
                 value.squeeze().cpu(),
-                normalized_rewards.squeeze(),
+                (
+                    normalized_rewards.squeeze()
+                    if config.reward_normalization
+                    else rewards.squeeze()
+                ),
                 dones,
             )
-            curr_reward += rewards.mean().item()
+            curr_reward += rewards[:, 0].mean().item()
             obs = [o[0] for o in next_obs]
             for e in range(batch_size):
                 if dones[e][0] and not doness[e]:
