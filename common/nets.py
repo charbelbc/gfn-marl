@@ -324,7 +324,7 @@ class MPE_RNN_Actor(torch.nn.Module):
         batch, agents, features = observations.shape
         x = self.activation(self.actor_1(observations.flatten(0, 1)))
         x = self.activation(self.actor_2(x))
-        self.actor_rnn_hidden = self.actor_rnn(x)
+        self.actor_rnn_hidden = self.actor_rnn(x, self.actor_rnn_hidden)
         actor_logits = self.actor_3(self.actor_rnn_hidden)
 
         return actor_logits.reshape(batch, agents, -1).log_softmax(-1)
@@ -353,7 +353,7 @@ class MPE_RNN_Critic(torch.nn.Module):
         batch, agents, features = observations.shape
         y = self.activation(self.critic_1(observations.flatten(0, 1)))
         y = self.activation(self.critic_2(y))
-        self.critic_rnn_hidden = self.critic_rnn(y)
+        self.critic_rnn_hidden = self.critic_rnn(y, self.critic_rnn_hidden)
         value = self.critic_3(self.critic_rnn_hidden)
 
         return value.reshape(batch, agents, -1)
