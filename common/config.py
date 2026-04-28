@@ -10,15 +10,15 @@ class Config:
     num_landmarks: int = 3
     episode_length: int = 25
     action_dim: int = 5
-    batch_size: int = 64
-    minibatch_size: int = 64
+    batch_size: int = 32
+    minibatch_size: int = 32
     use_rnn: float = True
-    normalize_value: bool = False
-    value_clipping: bool = False
+    normalize_value: bool = True
+    value_clipping: bool = True
 
     # PPO parameters
     gamma: float = 0.99
     gaelambda: float = 0.95
-    ppo_epochs: int = 15
+    ppo_epochs: int = 10
     eps_clip: float = 0.2
     lr: float = 0.0005

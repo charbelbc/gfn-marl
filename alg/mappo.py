@@ -186,46 +186,38 @@ class MAPPO:
 
 
 class ValueNormalizer:
-    def __init__(self, epsilon=1e-5, clip_range=10.0):
-        self.mean = 0.0
-        self.var = 1.0
-        self.count = epsilon
-        self.clip_range = clip_range
+    def __init__(self, shape=(), epsilon=1e-5, beta=0.99999):
+        self.running_mean = torch.zeros(shape).float()
+        self.running_mean_squared = torch.zeros(shape).float()
+        self.debiasing_term = torch.tensor([0.0])
+        self.epsilon = epsilon
+        self.beta = beta
+
+    def running_mean_var(self):
+        debiased_mean = self.running_mean / self.debiasing_term.clamp(min=self.epsilon)
+        debiased_mean_sq = self.running_mean_squared / self.debiasing_term.clamp(
+            min=self.epsilon
+        )
+        debiased_var = (debiased_mean_sq - debiased_mean**2).clamp(min=1e-2)
+        return debiased_mean, debiased_var
 
     def update(self, values: torch.Tensor):
         batch_mean = values.mean().item()
-        batch_var = values.var(unbiased=False).item()
-        batch_count = values.numel()
+        batch_squared_mean = (values**2).mean().item()
 
-        self._update_from_moments(batch_mean, batch_var, batch_count)
-
-    def _update_from_moments(self, mean, var, count):
-        delta = mean - self.mean
-        tot_count = self.count + count
-
-        new_mean = self.mean + delta * count / tot_count
-
-        m_a = self.var * self.count
-        m_b = var * count
-        M2 = m_a + m_b + (delta**2) * self.count * count / tot_count
-
-        new_var = M2 / tot_count
-
-        self.mean = new_mean
-        self.var = new_var
-        self.count = tot_count
-
-    @property
-    def std(self):
-        return (self.var + 1e-8) ** 0.5
+        self.running_mean = self.running_mean * self.beta + batch_mean * (1 - self.beta)
+        self.running_mean_squared = (
+            self.running_mean_squared * self.beta + batch_squared_mean * (1 - self.beta)
+        )
+        self.debiasing_term = self.debiasing_term * self.beta + 1.0 * (1 - self.beta)
 
     def normalize(self, values):
-        return torch.clamp(
-            (values - self.mean) / self.std, -self.clip_range, self.clip_range
-        )
+        mean, var = self.running_mean_var()
+        return (values - mean) / (torch.sqrt(var))
 
     def denormalize(self, values):
-        return values * self.std + self.mean
+        mean, var = self.running_mean_var()
+        return values * torch.sqrt(var) + mean
 
 
 class MPE_MAPPO:
