@@ -203,8 +203,8 @@ class ValueNormalizer:
 
     @torch.no_grad()
     def update(self, values: torch.Tensor):
-        batch_mean = values.mean(dim=(0, 1)).item()
-        batch_squared_mean = (values**2).mean(dim=(0, 1)).item()
+        batch_mean = values.mean(dim=(0, 1))
+        batch_squared_mean = (values**2).mean(dim=(0, 1))
 
         self.running_mean.mul_(self.beta).add_(batch_mean * (1 - self.beta))
         self.running_mean_squared.mul_(self.beta).add_(
