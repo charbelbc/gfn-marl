@@ -11,7 +11,7 @@ class Config:
     episode_length: int = 25
     action_dim: int = 5
     batch_size: int = 32
-    minibatch_size: int = 8
+    minibatch_size: int = 32
     use_rnn: float = False
     normalize_value: bool = True
     value_clipping: bool = False

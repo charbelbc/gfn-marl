@@ -314,12 +314,14 @@ class MPE_MAPPO:
         dones = torch.tensor(buffer.buffer["is_terminals"])
         batch, max_T, _ = rewards.shape
 
-        advantages = []
-        gae = 0
         with torch.no_grad():
             deltas = rewards + self.gamma * values[:, 1:] * (1 - dones) - values[:, :-1]
+            gae = torch.zeros_like(deltas[:, 0])
+            advantages = []
             for t in reversed(range(max_T)):
-                gae = deltas[:, t] + self.gamma * self.gaelambda * gae
+                gae = deltas[:, t] + self.gamma * self.gaelambda * gae * (
+                    1 - dones[:, t]
+                )
                 advantages.insert(0, gae)
             advantages = torch.stack(advantages, dim=1)
             returns = advantages + values[:, :-1]
@@ -401,7 +403,13 @@ class MPE_MAPPO:
 
                 self.optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
+                # torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
+                actor_grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.actor.parameters(), max_norm=10.0
+                )
+                critic_grad_norm = torch.nn.utils.clip_grad_norm_(
+                    self.critic.parameters(), max_norm=10.0
+                )
                 self.optimizer.step()
 
         losses = {
@@ -409,5 +417,19 @@ class MPE_MAPPO:
             "critic_loss": value_loss.mean().item(),
             "entropy": entropy.mean().item(),
             "ratios": ratios.mean().item(),
+            "adv_mean": advantages.mean().item(),
+            "adv_std": advantages.std().item(),
+            "adv_abs_mean": advantages.abs().mean().item(),
+            "actor_grad_norm": actor_grad_norm.item(),
+            "critic_grad_norm": critic_grad_norm.item(),
         }
         return losses
+
+
+def get_gard_norm(it):
+    sum_grad = 0
+    for x in it:
+        if x.grad is None:
+            continue
+        sum_grad += x.grad.norm() ** 2
+    return torch.sqrt(sum_grad)
