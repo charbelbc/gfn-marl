@@ -242,6 +242,8 @@ class MPE_MAPPO:
         action_dim: int = 5,
         use_rnn: bool = False,
         minibatch_size: int = 8,
+        normalize_value: bool = False,
+        value_clipping: bool = False,
     ):
 
         self.n_agents = n_agents
@@ -253,6 +255,8 @@ class MPE_MAPPO:
         self.action_dim = action_dim
         self.use_rnn = use_rnn
         self.minibatch_size = minibatch_size
+        self.normalize_value = normalize_value
+        self.value_clipping = value_clipping
 
         if self.use_rnn:
             self.actor = MPE_RNN_Actor(action_dim=action_dim, n_agents=n_agents).to(
@@ -303,7 +307,8 @@ class MPE_MAPPO:
 
         rewards = torch.tensor(buffer.buffer["rewards"])
         values = torch.tensor(buffer.buffer["state_values"]).detach()
-        # values = self.value_norm.denormalize(values)
+        if self.normalize_value:
+            values = self.value_norm.denormalize(values)
         dones = torch.tensor(buffer.buffer["is_terminals"])
         batch, max_T, _ = rewards.shape
 
@@ -317,13 +322,15 @@ class MPE_MAPPO:
             advantages = torch.stack(advantages, dim=1)
             returns = advantages + values[:, :-1]
 
-        # self.value_norm.update(returns)
+        if self.normalize_value:
+            self.value_norm.update(returns)
+            returns = self.value_norm.normalize(returns).to(self.device)
+            old_values = self.value_norm.normalize(values[:, :-1]).to(self.device)
+        else:
+            returns = returns.to(self.device)
+            old_values = values[:, :-1].to(self.device)
         advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-7)
         advantages = advantages.to(self.device)
-        returns = self.value_norm.normalize(returns).to(self.device)
-        returns = returns.to(self.device)
-        # old_values = values[:, :-1].to(self.device)
-        # returns = (returns - returns.mean()) / (returns.std() + 1e-7)
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         old_actions = torch.tensor(buffer.buffer["actions"]).to(self.device)
         old_logprobs = torch.tensor(buffer.buffer["log_probs"]).detach().to(self.device)
@@ -354,7 +361,6 @@ class MPE_MAPPO:
                     logits_now = torch.stack(logits_now, dim=1)
                     values_now = torch.stack(values_now, dim=1).squeeze(-1)
                 else:
-                    # logits_now, values_now = self.policy(old_states.flatten(0, 1).float())
                     logits_now = self.actor(old_states[index].float())
                     values_now = self.critic(
                         old_states[index]
@@ -363,16 +369,6 @@ class MPE_MAPPO:
                         .repeat(1, 1, self.n_agents, 1)
                         .float()
                     ).squeeze(-1)
-                    # logits_now = logits_now.reshape(batch, max_T, self.n_agents, -1)
-                    # values_now = values_now.reshape(batch, max_T)
-                # logits_now = torch.cat(
-                #     [logits_now[i, : lengths[i]] for i in range(len(lengths))],
-                #     dim=0,
-                # )
-                # values_now = torch.cat(
-                #     [values_now[i, : lengths[i]] for i in range(len(lengths))],
-                #     dim=0,
-                # )
 
                 distribution_now = torch.distributions.Categorical(logits=logits_now)
                 logprobs_now = distribution_now.log_prob(old_actions[index])
@@ -386,22 +382,23 @@ class MPE_MAPPO:
                 )
                 policy_loss = -torch.min(surr1, surr2) - 0.01 * entropy
 
-                # value_clipped = old_values + torch.clamp(
-                #     values_now - old_values, -self.eps_clip, self.eps_clip
-                # )
-                # value_surr1 = (values_now - returns).pow(2)
-                # value_surr2 = (value_clipped - returns).pow(2)
-                # value_loss = torch.max(value_surr1, value_surr2).mean()
-                # value_loss = (values_now - returns[index]).pow(2)
-                value_loss = torch.nn.functional.smooth_l1_loss(
-                    values_now, returns[index], reduction="none", beta=10.0
-                )
+                if self.value_clipping:
+                    value_clipped = old_values[index] + torch.clamp(
+                        values_now - old_values[index], -self.eps_clip, self.eps_clip
+                    )
+                    value_surr1 = (values_now - returns[index]).pow(2)
+                    value_surr2 = (value_clipped - returns[index]).pow(2)
+                    value_loss = torch.max(value_surr1, value_surr2)
+                else:
+                    # value_loss = (values_now - returns[index]).pow(2)
+                    value_loss = torch.nn.functional.smooth_l1_loss(
+                        values_now, returns[index], reduction="none", beta=10.0
+                    )
 
                 loss = policy_loss.mean() + 0.5 * value_loss.mean()
 
                 self.optimizer.zero_grad()
                 loss.backward()
-                # torch.nn.utils.clip_grad_norm_(self.policy.parameters(), max_norm=10.0)
                 torch.nn.utils.clip_grad_norm_(self.ac_parameters, max_norm=10.0)
                 self.optimizer.step()
 

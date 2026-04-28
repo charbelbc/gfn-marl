@@ -129,6 +129,8 @@ def train_mpe(
         action_dim=config.action_dim,
         use_rnn=config.use_rnn,
         minibatch_size=config.minibatch_size,
+        normalize_value=config.normalize_value,
+        value_clipping=config.value_clipping,
     )
     buffer = MPE_ReplayBuffer(
         batch_size=batch_size,
@@ -183,8 +185,8 @@ def train_mpe(
         buffer.reset_buffer()
         episode += batch_size
 
-        lr_now = config.lr * (1 - (episode * config.episode_length) / 5_000_000)
-        # agent.optimizer.param_groups[0]["lr"] = lr_now
+        lr_now = config.lr * (1 - (episode * config.episode_length) / 20_000_000)
+        agent.optimizer.param_groups[0]["lr"] = lr_now
         # print(episode, curr_reward)
 
         if logging:
