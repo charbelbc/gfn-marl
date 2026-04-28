@@ -186,7 +186,7 @@ class MAPPO:
 
 
 class ValueNormalizer:
-    def __init__(self, shape=(), epsilon=1e-5, beta=0.99999):
+    def __init__(self, shape=(), epsilon=1e-5, beta=0.999):
         self.running_mean = torch.zeros(shape).float()
         self.running_mean_squared = torch.zeros(shape).float()
         self.debiasing_term = torch.tensor([0.0])
@@ -198,25 +198,30 @@ class ValueNormalizer:
         debiased_mean_sq = self.running_mean_squared / self.debiasing_term.clamp(
             min=self.epsilon
         )
-        debiased_var = (debiased_mean_sq - debiased_mean**2).clamp(min=1e-2)
+        debiased_var = (debiased_mean_sq - debiased_mean**2).clamp(min=1e-4)
         return debiased_mean, debiased_var
 
+    @torch.no_grad()
     def update(self, values: torch.Tensor):
-        batch_mean = values.mean().item()
-        batch_squared_mean = (values**2).mean().item()
+        batch_mean = values.mean(dim=(0, 1)).item()
+        batch_squared_mean = (values**2).mean(dim=(0, 1)).item()
 
-        self.running_mean = self.running_mean * self.beta + batch_mean * (1 - self.beta)
-        self.running_mean_squared = (
-            self.running_mean_squared * self.beta + batch_squared_mean * (1 - self.beta)
+        self.running_mean.mul_(self.beta).add_(batch_mean * (1 - self.beta))
+        self.running_mean_squared.mul_(self.beta).add_(
+            batch_squared_mean * (1 - self.beta)
         )
-        self.debiasing_term = self.debiasing_term * self.beta + 1.0 * (1 - self.beta)
+        self.debiasing_term.mul_(self.beta).add_(1.0 * (1 - self.beta))
 
     def normalize(self, values):
         mean, var = self.running_mean_var()
+        mean = mean.view(1, 1, -1)
+        var = var.view(1, 1, -1)
         return (values - mean) / (torch.sqrt(var))
 
     def denormalize(self, values):
         mean, var = self.running_mean_var()
+        mean = mean.view(1, 1, -1)
+        var = var.view(1, 1, -1)
         return values * torch.sqrt(var) + mean
 
 
@@ -276,7 +281,8 @@ class MPE_MAPPO:
         # self.policy.train()
         # self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
         self.optimizer = torch.optim.Adam(self.ac_parameters, lr=lr, eps=1e-5)
-        self.value_norm = ValueNormalizer()
+        if self.normalize_value:
+            self.value_norm = ValueNormalizer(shape=self.n_agents)
 
     def select_action(self, obs):
 
