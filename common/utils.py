@@ -135,7 +135,9 @@ class MPE_ReplayBuffer:
             "states": np.zeros(
                 [self.batch_size, self.ep_limit, self.n_agents, 6 * self.n_agents]
             ),
-            "actions": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
+            "actions": np.empty(
+                [self.batch_size, self.ep_limit, self.n_agents], dtype=int
+            ),
             "log_probs": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "rewards": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
             "state_values": np.empty(

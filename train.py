@@ -165,7 +165,7 @@ def train_mpe(
             buffer.store_transition(
                 step,
                 obs,
-                actions.argmax(-1).cpu(),
+                actions.cpu(),
                 logits.cpu(),
                 value.squeeze().cpu(),
                 normalized_rewards.squeeze(),

@@ -288,7 +288,7 @@ class MPE_MAPPO:
             dist = torch.distributions.Categorical(logits=logits)
             action = dist.sample()
             logprobs = dist.log_prob(action)
-            action = torch.nn.functional.one_hot(action, 5)
+            # action = torch.nn.functional.one_hot(action, 5)
             # action = torch.nn.functional.one_hot(
             #     logits.softmax(-1)
             #     .flatten(0, 1)
@@ -386,10 +386,10 @@ class MPE_MAPPO:
                     value_surr2 = (value_clipped - returns[index]).pow(2)
                     value_loss = torch.max(value_surr1, value_surr2)
                 else:
-                    # value_loss = (values_now - returns[index]).pow(2)
-                    value_loss = torch.nn.functional.smooth_l1_loss(
-                        values_now, returns[index], reduction="none", beta=10.0
-                    )
+                    value_loss = (values_now - returns[index]).pow(2)
+                    # value_loss = torch.nn.functional.smooth_l1_loss(
+                    #     values_now, returns[index], reduction="none", beta=10.0
+                    # )
 
                 loss = policy_loss.mean() + 0.5 * value_loss.mean()
 
