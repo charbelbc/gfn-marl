@@ -5,6 +5,7 @@ import gymnasium as gym
 from alg.mappo import MAPPO, MPE_MAPPO
 from common.utils import ReplayBuffer, ParallelEnv, MPE_ReplayBuffer
 from mpe.MPE_env import MPEEnv
+from multiagent.make_env import make_env
 from common.utils import Normalization
 
 import multigrid.envs
@@ -137,7 +138,8 @@ def train_mpe(
         ep_limit=config.episode_length,
         n_agents=config.num_agents,
     )
-    envs = [MPEEnv(config) for _ in range(batch_size)]
+    # envs = [MPEEnv(config) for _ in range(batch_size)]
+    envs = [make_env("simple_spread") for _ in range(batch_size)]
     env = ParallelEnv(envs)
 
     episode = 0

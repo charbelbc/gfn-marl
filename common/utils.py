@@ -5,6 +5,8 @@ import torch
 
 from mpe.scenarios.simple_spread import Scenario
 import mpe.environment
+from multiagent.scenarios.simple_spread import Scenario
+import multiagent.environment
 
 
 def worker(conn, env):
