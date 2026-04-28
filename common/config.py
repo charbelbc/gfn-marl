@@ -13,7 +13,7 @@ class Config:
     batch_size: int = 64
     minibatch_size: int = 64
     use_rnn: float = True
-    normalize_value: bool = True
+    normalize_value: bool = False
     value_clipping: bool = False
 
     # PPO parameters

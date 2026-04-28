@@ -207,7 +207,7 @@ class ValueNormalizer:
 
         m_a = self.var * self.count
         m_b = var * count
-        M2 = m_a + m_b + delta**2 * self.count * count / tot_count
+        M2 = m_a + m_b + (delta**2) * self.count * count / tot_count
 
         new_var = M2 / tot_count
 
