@@ -11,10 +11,10 @@ class Config:
     episode_length: int = 25
     action_dim: int = 5
     batch_size: int = 32
-    minibatch_size: int = 32
-    use_rnn: float = True
-    normalize_value: bool = True
-    value_clipping: bool = True
+    minibatch_size: int = 8
+    use_rnn: float = False
+    normalize_value: bool = False
+    value_clipping: bool = False
 
     # PPO parameters
     gamma: float = 0.99
