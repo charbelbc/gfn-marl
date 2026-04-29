@@ -18,7 +18,7 @@ def main():
     config = Config()
 
     with wandb.init(project="wi-symmetry", config=config.__dict__):
-        train_mpe_single(config=config)
+        train_mpe(config=config)
 
 
 if __name__ == "__main__":
