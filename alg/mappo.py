@@ -9,7 +9,7 @@ from common.nets import (
     MPE_Actor,
     MPE_Critic,
 )
-from common.utils import ReplayBuffer, Normalization
+from common.utils import ReplayBuffer, Normalization, MPE_ReplayBuffer
 
 
 class MAPPO:
@@ -305,7 +305,7 @@ class MPE_MAPPO:
 
                 return action, logprobs, value.squeeze()
 
-    def update(self, buffer: ReplayBuffer):
+    def update(self, buffer: MPE_ReplayBuffer):
 
         rewards = torch.tensor(buffer.buffer["rewards"])
         values = torch.tensor(buffer.buffer["state_values"]).detach()
