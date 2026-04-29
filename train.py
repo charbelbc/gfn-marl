@@ -3,7 +3,7 @@ import numpy as np
 from common.config import Config
 import gymnasium as gym
 from alg.mappo import MAPPO, MPE_MAPPO
-from common.utils import ReplayBuffer, ParallelEnv, MPE_ReplayBuffer
+from common.utils import ReplayBuffer, ParallelEnv, MPE_ReplayBuffer, my_f
 from mpe.MPE_env import MPEEnv
 from multiagent.make_env import make_env
 from common.utils import Normalization
@@ -139,8 +139,8 @@ def train_mpe(
         n_agents=config.num_agents,
     )
     # envs = [MPEEnv(config) for _ in range(batch_size)]
-    envs = [make_env("simple_spread") for _ in range(batch_size)]
-    env = ParallelEnv(envs)
+    # envs = [make_env("simple_spread") for _ in range(batch_size)]
+    env = ParallelEnv(my_f, batch_size)
 
     episode = 0
     if config.reward_normalization:
