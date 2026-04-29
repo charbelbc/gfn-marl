@@ -150,14 +150,14 @@ def train_mpe(
 
         obs = env.reset()
         dones = torch.zeros(batch_size, dtype=bool)
-        doness = dones.clone()
+        # doness = dones.clone()
         step = 0
         curr_reward = 0.0
         if config.use_rnn:
             agent.actor.actor_rnn_hidden = None
             agent.critic.critic_rnn_hidden = None
 
-        while not doness.all():
+        for _ in range(config.episode_length):
             actions, logits, value = agent.select_action(obs)
             next_obs = env.step(actions.cpu())
             rewards = torch.stack([torch.tensor(o[1]).squeeze() for o in next_obs])
@@ -179,13 +179,15 @@ def train_mpe(
             )
             curr_reward += rewards[:, 0].mean().item()
             obs = [o[0] for o in next_obs]
-            for e in range(batch_size):
-                if dones[e][0] and not doness[e]:
-                    doness[e] = True
-                    buffer.buffer["lengths"][e] = step
-                    _, _, value = agent.select_action(obs)
-                    buffer.buffer["state_values"][e, -1] = value[e].cpu()
+            # for e in range(batch_size):
+            #     if dones[e][0] and not doness[e]:
+            #         doness[e] = True
+            #         buffer.buffer["lengths"][e] = step
+            #         _, _, value = agent.select_action(obs)
+            #         buffer.buffer["state_values"][e, -1] = value[e].cpu()
             step += 1
+        _, _, value = agent.select_action(obs)
+        buffer.buffer["state_values"][:, -1] = value.squeeze().cpu()
 
         loss_dict = agent.update(buffer)
         buffer.reset_buffer()

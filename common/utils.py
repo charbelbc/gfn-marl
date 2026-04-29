@@ -137,16 +137,16 @@ class MPE_ReplayBuffer:
             "states": np.zeros(
                 [self.batch_size, self.ep_limit, self.n_agents, 6 * self.n_agents]
             ),
-            "actions": np.empty(
+            "actions": np.zeros(
                 [self.batch_size, self.ep_limit, self.n_agents], dtype=int
             ),
-            "log_probs": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "rewards": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "state_values": np.empty(
+            "log_probs": np.zeros([self.batch_size, self.ep_limit, self.n_agents]),
+            "rewards": np.zeros([self.batch_size, self.ep_limit, self.n_agents]),
+            "state_values": np.zeros(
                 [self.batch_size, self.ep_limit + 1, self.n_agents]
             ),
-            "is_terminals": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "lengths": np.empty([self.batch_size]),
+            "is_terminals": np.zeros([self.batch_size, self.ep_limit, self.n_agents]),
+            "lengths": np.zeros([self.batch_size]),
         }
 
     def store_transition(
