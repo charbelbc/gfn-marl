@@ -2,6 +2,7 @@ from multiprocessing import Process, Pipe
 import gymnasium as gym
 import numpy as np
 import torch
+import random
 
 from mpe.scenarios.simple_spread import Scenario
 import mpe.environment
@@ -10,82 +11,14 @@ import multiagent.environment
 from multiagent.make_env import make_env
 
 
-# def worker(conn, env):
-#     while True:
-#         cmd, data = conn.recv()
-#         if cmd == "step":
-#             # obs, reward, terminated, truncated, info = env.step(data)
-#             # if terminated[0] or truncated[0]:
-#             #     obs, _ = env.reset()
-#             # conn.send((obs, reward, terminated, truncated, info))
-#             obs, reward, terminated, info = env.step(data)
-#             conn.send((obs, reward, terminated, info))
-#         elif cmd == "reset":
-#             # obs, _ = env.reset()
-#             # conn.send((obs,))
-#             obs = env.reset()
-#             conn.send(obs)
-#         else:
-#             raise NotImplementedError
-
-
-# class ParallelEnv(gym.Env):
-#     """A concurrent execution of environments in multiple processes."""
-
-#     def __init__(self, envs):
-#         assert len(envs) >= 1, "No environment given."
-
-#         self.envs = envs
-#         self.observation_space = self.envs[0].observation_space
-#         self.action_space = self.envs[0].action_space
-
-#         self.locals = []
-#         self.processes = []
-#         for env in self.envs[1:]:
-#             local, remote = Pipe()
-#             self.locals.append(local)
-#             p = Process(target=worker, args=(remote, env))
-#             p.daemon = True
-#             p.start()
-#             remote.close()
-#             self.processes.append(p)
-
-#     def reset(self):
-#         for local in self.locals:
-#             local.send(("reset", None))
-#         # results = [(self.envs[0].reset()[0],)] + [local.recv() for local in self.locals]
-#         results = [self.envs[0].reset()] + [local.recv() for local in self.locals]
-#         return results
-
-#     def step(self, actions):
-#         for local, action in zip(self.locals, actions[1:]):
-#             local.send(("step", action))
-#         # obs, reward, terminated, truncated, info = self.envs[0].step(actions[0])
-#         # if terminated[0] or truncated[0]:
-#         #     obs, _ = self.envs[0].reset()
-#         # results = [(obs, reward, terminated, truncated, info)] + [
-#         #     local.recv() for local in self.locals
-#         # ]
-#         obs, reward, terminated, info = self.envs[0].step(actions[0])
-#         results = [(obs, reward, terminated, info)] + [
-#             local.recv() for local in self.locals
-#         ]
-#         return results
-
-#     def render(self):
-#         raise NotImplementedError
-
-#     def __del__(self):
-#         for p in self.processes:
-#             p.terminate()
-
-
 def my_f():
     return make_env("simple_spread")
 
 
-def worker(remote, parent_remote, env_fn):
+def worker(remote, parent_remote, env_fn, seed):
     parent_remote.close()
+    np.random.seed(seed)
+    random.seed(seed)
     env = env_fn()
     while True:
         cmd, data = remote.recv()
@@ -102,14 +35,15 @@ def worker(remote, parent_remote, env_fn):
 
 
 class ParallelEnv:
-    def __init__(self, env_fn, n_envs):
+    def __init__(self, env_fn, n_envs, base_seed=42):
         self.n_envs = n_envs
 
         self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_envs)])
 
         self.processes = []
-        for work_remote, remote in zip(self.work_remotes, self.remotes):
-            p = Process(target=worker, args=(work_remote, remote, env_fn))
+        for i, (work_remote, remote) in enumerate(zip(self.work_remotes, self.remotes)):
+            seed = base_seed + i
+            p = Process(target=worker, args=(work_remote, remote, env_fn, seed))
             p.daemon = True
             p.start()
             work_remote.close()
