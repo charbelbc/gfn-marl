@@ -266,9 +266,6 @@ class MPE_MAPPO:
                 self.critic.parameters()
             )
         else:
-            # self.policy = MPE_ACNetwork(action_dim=action_dim, n_agents=n_agents).to(
-            #     self.device
-            # )
             self.actor = MPE_Actor(action_dim=action_dim, n_agents=n_agents).to(
                 self.device
             )
@@ -278,32 +275,35 @@ class MPE_MAPPO:
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
-        # self.policy.train()
-        # self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=lr, eps=1e-5)
         self.optimizer = torch.optim.Adam(self.ac_parameters, lr=lr, eps=1e-5)
         if self.normalize_value:
             self.value_norm = ValueNormalizer(shape=self.n_agents)
 
-    def select_action(self, obs):
+    def select_action(self, obs, actor_memory=None, critic_memory=None):
 
         with torch.no_grad():
             obs = torch.from_numpy(np.stack(obs)).float().to(self.device)
-            # logits, value = self.policy(obs)
-            logits = self.actor(obs)
-            value = self.critic(obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1))
-            dist = torch.distributions.Categorical(logits=logits)
-            action = dist.sample()
-            logprobs = dist.log_prob(action)
-            # action = torch.nn.functional.one_hot(action, 5)
-            # action = torch.nn.functional.one_hot(
-            #     logits.softmax(-1)
-            #     .flatten(0, 1)
-            #     .multinomial(1)
-            #     .reshape(obs.shape[0], obs.shape[1]),
-            #     5,
-            # )
+            if self.use_rnn:
+                logits, actor_memory = self.actor(obs, actor_memory)
+                value, critic_memory = self.critic(
+                    obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1),
+                    critic_memory,
+                )
+                dist = torch.distributions.Categorical(logits=logits)
+                action = dist.sample()
+                logprobs = dist.log_prob(action)
 
-        return action, logprobs, value.squeeze()
+                return action, logprobs, value.squeeze(), actor_memory, critic_memory
+            else:
+                logits = self.actor(obs)
+                value = self.critic(
+                    obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1)
+                )
+                dist = torch.distributions.Categorical(logits=logits)
+                action = dist.sample()
+                logprobs = dist.log_prob(action)
+
+                return action, logprobs, value.squeeze()
 
     def update(self, buffer: ReplayBuffer):
 
@@ -348,20 +348,27 @@ class MPE_MAPPO:
             ):
 
                 if self.use_rnn:
-                    self.actor.actor_rnn_hidden = None
-                    self.critic.critic_rnn_hidden = None
+                    actor_memory = torch.zeros(
+                        self.minibatch_size * self.n_agents, 64
+                    ).to(self.device)
+                    critic_memory = torch.zeros(
+                        self.minibatch_size * self.n_agents, 64
+                    ).to(self.device)
                     logits_now, values_now = [], []
                     for t in range(max_T):
-                        logits = self.actor(old_states[index, t].float())
-                        value = self.critic(
+                        logits, actor_memory = self.actor(
+                            old_states[index, t].float(), actor_memory
+                        )
+                        value, critic_memory = self.critic(
                             old_states[index, t]
                             .flatten(1)
                             .unsqueeze(1)
                             .repeat(1, self.n_agents, 1)
-                            .float()
-                        ).squeeze(-1)
+                            .float(),
+                            critic_memory,
+                        )
                         logits_now.append(logits)
-                        values_now.append(value)
+                        values_now.append(value.squeeze(-1))
                     logits_now = torch.stack(logits_now, dim=1)
                     values_now = torch.stack(values_now, dim=1).squeeze(-1)
                 else:

@@ -312,7 +312,7 @@ class MPE_RNN_Actor(torch.nn.Module):
         self.actor_rnn = torch.nn.GRUCell(64, 64)
         self.actor_3 = torch.nn.Linear(64, action_dim)
         self.activation = torch.nn.Tanh()
-        self.actor_rnn_hidden = None
+        # self.actor_rnn_hidden = None
         self.feature_norm = torch.nn.LayerNorm(6 * n_agents)
         self.norm_1 = torch.nn.LayerNorm(64)
         self.norm_2 = torch.nn.LayerNorm(64)
@@ -323,15 +323,15 @@ class MPE_RNN_Actor(torch.nn.Module):
         orthogonal_init(self.actor_rnn)
         orthogonal_init(self.actor_3, gain=0.01)
 
-    def forward(self, observations):
+    def forward(self, observations, actor_rnn_hidden):
 
         batch, agents, features = observations.shape
         x = self.activation(self.actor_1(self.feature_norm(observations.flatten(0, 1))))
         x = self.activation(self.actor_2(self.norm_1(x)))
-        self.actor_rnn_hidden = self.actor_rnn(self.norm_2(x), self.actor_rnn_hidden)
-        actor_logits = self.actor_3(self.norm_3(self.actor_rnn_hidden))
+        actor_memory = self.actor_rnn(self.norm_2(x), actor_rnn_hidden)
+        actor_logits = self.actor_3(self.norm_3(actor_memory))
 
-        return actor_logits.reshape(batch, agents, -1).log_softmax(-1)
+        return actor_logits.reshape(batch, agents, -1).log_softmax(-1), actor_memory
 
 
 class MPE_RNN_Critic(torch.nn.Module):
@@ -345,7 +345,7 @@ class MPE_RNN_Critic(torch.nn.Module):
         self.critic_rnn = torch.nn.GRUCell(64, 64)
         self.critic_3 = torch.nn.Linear(64, 1)
         self.activation = torch.nn.Tanh()
-        self.critic_rnn_hidden = None
+        # self.critic_rnn_hidden = None
         self.feature_norm = torch.nn.LayerNorm(6 * n_agents * n_agents)
         self.norm_1 = torch.nn.LayerNorm(64)
         self.norm_2 = torch.nn.LayerNorm(64)
@@ -356,14 +356,14 @@ class MPE_RNN_Critic(torch.nn.Module):
         orthogonal_init(self.critic_rnn)
         orthogonal_init(self.critic_3)
 
-    def forward(self, observations):
+    def forward(self, observations, critic_rnn_hidden):
 
         batch, agents, features = observations.shape
         y = self.activation(
             self.critic_1(self.feature_norm(observations.flatten(0, 1)))
         )
         y = self.activation(self.critic_2(self.norm_1(y)))
-        self.critic_rnn_hidden = self.critic_rnn(self.norm_2(y), self.critic_rnn_hidden)
-        value = self.critic_3(self.norm_3(self.critic_rnn_hidden))
+        critic_memory = self.critic_rnn(self.norm_2(y), critic_rnn_hidden)
+        value = self.critic_3(self.norm_3(critic_memory))
 
-        return value.reshape(batch, agents, -1)
+        return value.reshape(batch, agents, -1), critic_memory

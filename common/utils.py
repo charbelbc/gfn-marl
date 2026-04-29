@@ -146,13 +146,12 @@ class MPE_ReplayBuffer:
                 [self.batch_size, self.ep_limit + 1, self.n_agents]
             ),
             "is_terminals": np.zeros([self.batch_size, self.ep_limit, self.n_agents]),
-            "lengths": np.zeros([self.batch_size]),
         }
 
     def store_transition(
         self, step, obs, actions, log_probs, state_values, rewards, dones
     ):
-        self.buffer["states"][:, step] = torch.from_numpy(np.stack(obs)).float()
+        self.buffer["states"][:, step] = np.stack(obs)
         self.buffer["actions"][:, step] = actions
         self.buffer["log_probs"][:, step] = log_probs
         self.buffer["rewards"][:, step] = rewards

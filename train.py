@@ -154,11 +154,16 @@ def train_mpe(
         step = 0
         curr_reward = 0.0
         if config.use_rnn:
-            agent.actor.actor_rnn_hidden = None
-            agent.critic.critic_rnn_hidden = None
+            actor_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
+            critic_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
 
         for _ in range(config.episode_length):
-            actions, logits, value = agent.select_action(obs)
+            if config.use_rnn:
+                actions, logits, value, actor_memory, critic_memory = (
+                    agent.select_action(obs, actor_memory, critic_memory)
+                )
+            else:
+                actions, logits, value = agent.select_action(obs)
             next_obs = env.step(actions.cpu())
             rewards = torch.stack([torch.tensor(o[1]).squeeze() for o in next_obs])
             if config.reward_normalization:
@@ -179,14 +184,12 @@ def train_mpe(
             )
             curr_reward += rewards[:, 0].mean().item()
             obs = [o[0] for o in next_obs]
-            # for e in range(batch_size):
-            #     if dones[e][0] and not doness[e]:
-            #         doness[e] = True
-            #         buffer.buffer["lengths"][e] = step
-            #         _, _, value = agent.select_action(obs)
-            #         buffer.buffer["state_values"][e, -1] = value[e].cpu()
             step += 1
-        _, _, value = agent.select_action(obs)
+
+        if config.use_rnn:
+            _, _, value, _, _ = agent.select_action(obs, actor_memory, critic_memory)
+        else:
+            _, _, value = agent.select_action(obs)
         buffer.buffer["state_values"][:, -1] = value.squeeze().cpu()
 
         loss_dict = agent.update(buffer)
@@ -195,7 +198,7 @@ def train_mpe(
 
         lr_now = config.lr * (1 - (episode * config.episode_length) / 20_000_000)
         agent.optimizer.param_groups[0]["lr"] = lr_now
-        # print(episode, curr_reward)
+        print(episode, curr_reward)
 
         if logging:
             loss_dict.update(
