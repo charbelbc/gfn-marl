@@ -244,3 +244,104 @@ def test_mpe(agent, env, config):
                 doness[e] = True
         step += 1
     return curr_reward
+
+
+def train_mpe_single(
+    config: Config,
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    logging: bool = True,
+):
+
+    batch_size = config.batch_size
+    agent = MPE_MAPPO(
+        device=device,
+        n_agents=config.num_agents,
+        gamma=config.gamma,
+        gaelambda=config.gaelambda,
+        ppo_epochs=config.ppo_epochs,
+        eps_clip=config.eps_clip,
+        lr=config.lr,
+        action_dim=config.action_dim,
+        use_rnn=config.use_rnn,
+        minibatch_size=config.minibatch_size,
+        normalize_value=config.normalize_value,
+        value_clipping=config.value_clipping,
+    )
+    buffer = MPE_ReplayBuffer(
+        batch_size=batch_size,
+        ep_limit=config.episode_length,
+        n_agents=config.num_agents,
+    )
+    # envs = [MPEEnv(config) for _ in range(batch_size)]
+    # envs = [make_env("simple_spread") for _ in range(batch_size)]
+    # env = ParallelEnv(envs)
+    env = make_env("simple_spread")
+
+    episode = 0
+    if config.reward_normalization:
+        reward_norm = Normalization(config.num_agents)
+
+    while (episode * config.episode_length) < 5_000_000:
+
+        for _ in range(config.batch_size):
+
+            obs = env.reset()
+            done = False
+            step = 0
+            curr_reward = 0.0
+            if config.use_rnn:
+                agent.actor.actor_rnn_hidden = None
+                agent.critic.critic_rnn_hidden = None
+
+            while not done:
+                actions, logits, value = agent.select_action([obs])
+                next_obs = env.step(actions.squeeze().cpu())
+                rewards = torch.tensor(next_obs[1])
+                if config.reward_normalization:
+                    normalized_rewards = reward_norm(rewards)
+                dones = torch.tensor(next_obs[2])
+                buffer.store_transitionn(
+                    step,
+                    [obs],
+                    actions.squeeze().cpu(),
+                    logits.squeeze().cpu(),
+                    value.squeeze().cpu(),
+                    (
+                        normalized_rewards.squeeze()
+                        if config.reward_normalization
+                        else rewards.squeeze()
+                    ),
+                    dones,
+                )
+                curr_reward += rewards[0].item()
+                obs = next_obs[0]
+                done = dones[0]
+                if done:
+                    _, _, value = agent.select_action(obs)
+                    buffer.buffer["state_values"][buffer.episode, -1] = value.cpu()
+                step += 1
+            buffer.episode += 1
+
+        loss_dict = agent.update(buffer)
+        buffer.reset_buffer()
+        buffer.episode = 0
+        episode += batch_size
+
+        lr_now = config.lr * (1 - (episode * config.episode_length) / 20_000_000)
+        agent.optimizer.param_groups[0]["lr"] = lr_now
+        # print(episode, curr_reward)
+
+        if logging:
+            loss_dict.update(
+                {
+                    "reward": curr_reward,
+                }
+            )
+            if episode % (50 * batch_size) == 0:
+                # test_reward = test_mpe(agent, env, config)
+                # loss_dict.update({"test_reward": test_reward})
+                torch.save(agent.actor.state_dict(), "model")
+            wandb.log(
+                loss_dict,
+                step=episode * config.episode_length,
+            )

@@ -130,6 +130,8 @@ class MPE_ReplayBuffer:
         self.buffer = None
         self.reset_buffer()
 
+        self.episode = 0
+
     def reset_buffer(self):
         self.buffer = {
             "states": np.zeros(
@@ -156,6 +158,25 @@ class MPE_ReplayBuffer:
         self.buffer["rewards"][:, step] = rewards
         self.buffer["state_values"][:, step] = state_values
         self.buffer["is_terminals"][:, step] = dones
+
+    def store_transitionn(
+        self,
+        step,
+        obs,
+        actions,
+        log_probs,
+        state_values,
+        rewards,
+        dones,
+    ):
+        self.buffer["states"][self.episode, step] = torch.from_numpy(
+            np.stack(obs)
+        ).float()
+        self.buffer["actions"][self.episode, step] = actions
+        self.buffer["log_probs"][self.episode, step] = log_probs
+        self.buffer["rewards"][self.episode, step] = rewards
+        self.buffer["state_values"][self.episode, step] = state_values
+        self.buffer["is_terminals"][self.episode, step] = dones
 
 
 class RunningMeanStd:
