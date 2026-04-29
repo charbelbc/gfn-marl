@@ -325,10 +325,10 @@ def train_mpe_single(
                 if done:
                     if config.use_rnn:
                         _, _, value, _, _ = agent.select_action(
-                            obs, actor_memory, critic_memory
+                            [obs], actor_memory, critic_memory
                         )
                     else:
-                        _, _, value = agent.select_action(obs)
+                        _, _, value = agent.select_action([obs])
                     buffer.buffer["state_values"][buffer.episode, -1] = value.cpu()
                 step += 1
             buffer.episode += 1
