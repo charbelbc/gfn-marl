@@ -18,7 +18,7 @@ def worker(conn, env):
             #     obs, _ = env.reset()
             # conn.send((obs, reward, terminated, truncated, info))
             obs, reward, terminated, info = env.step(data)
-            conn.send((obs, reward, terminated, info, env.render(size=200)))
+            conn.send((obs, reward, terminated, info))
         elif cmd == "reset":
             # obs, _ = env.reset()
             # conn.send((obs,))
@@ -66,7 +66,7 @@ class ParallelEnv(gym.Env):
         #     local.recv() for local in self.locals
         # ]
         obs, reward, terminated, info = self.envs[0].step(actions[0])
-        results = [(obs, reward, terminated, info, self.envs[0].render(size=200))] + [
+        results = [(obs, reward, terminated, info)] + [
             local.recv() for local in self.locals
         ]
         return results
@@ -151,7 +151,7 @@ class MPE_ReplayBuffer:
     def store_transition(
         self, step, obs, actions, log_probs, state_values, rewards, dones
     ):
-        self.buffer["states"][:, step] = np.stack(obs)
+        self.buffer["states"][:, step] = np.stack(obs, axis=0)
         self.buffer["actions"][:, step] = actions
         self.buffer["log_probs"][:, step] = log_probs
         self.buffer["rewards"][:, step] = rewards

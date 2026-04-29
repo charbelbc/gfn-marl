@@ -282,7 +282,7 @@ class MPE_MAPPO:
     def select_action(self, obs, actor_memory=None, critic_memory=None):
 
         with torch.no_grad():
-            obs = torch.from_numpy(np.stack(obs)).float().to(self.device)
+            obs = torch.from_numpy(np.stack(obs, axis=0)).float().to(self.device)
             if self.use_rnn:
                 logits, actor_memory = self.actor(obs, actor_memory)
                 value, critic_memory = self.critic(

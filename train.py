@@ -198,14 +198,9 @@ def train_mpe(
 
         lr_now = config.lr * (1 - (episode * config.episode_length) / 20_000_000)
         agent.optimizer.param_groups[0]["lr"] = lr_now
-        print(episode, curr_reward)
 
         if logging:
-            loss_dict.update(
-                {
-                    "reward": curr_reward,
-                }
-            )
+            loss_dict.update({"reward": curr_reward})
             if episode % (50 * batch_size) == 0:
                 # test_reward = test_mpe(agent, env, config)
                 # loss_dict.update({"test_reward": test_reward})
