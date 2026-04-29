@@ -291,11 +291,16 @@ def train_mpe_single(
             done = False
             step = 0
             if config.use_rnn:
-                agent.actor.actor_rnn_hidden = None
-                agent.critic.critic_rnn_hidden = None
+                actor_memory = torch.zeros(1 * config.num_agents, 64).to(device)
+                critic_memory = torch.zeros(1 * config.num_agents, 64).to(device)
 
             while not done:
-                actions, logits, value = agent.select_action([obs])
+                if config.use_rnn:
+                    actions, logits, value, actor_memory, critic_memory = (
+                        agent.select_action([obs], actor_memory, critic_memory)
+                    )
+                else:
+                    actions, logits, value = agent.select_action([obs])
                 next_obs = env.step(actions.squeeze().cpu())
                 rewards = torch.tensor(next_obs[1])
                 if config.reward_normalization:
