@@ -18,7 +18,7 @@ def worker(conn, env):
             #     obs, _ = env.reset()
             # conn.send((obs, reward, terminated, truncated, info))
             obs, reward, terminated, info = env.step(data)
-            conn.send((obs, reward, terminated, info))
+            conn.send((obs, reward, terminated, info, env.render(size=200)))
         elif cmd == "reset":
             # obs, _ = env.reset()
             # conn.send((obs,))
@@ -66,7 +66,7 @@ class ParallelEnv(gym.Env):
         #     local.recv() for local in self.locals
         # ]
         obs, reward, terminated, info = self.envs[0].step(actions[0])
-        results = [(obs, reward, terminated, info)] + [
+        results = [(obs, reward, terminated, info, self.envs[0].render(size=200))] + [
             local.recv() for local in self.locals
         ]
         return results

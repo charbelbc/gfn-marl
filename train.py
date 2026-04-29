@@ -283,12 +283,13 @@ def train_mpe_single(
 
     while (episode * config.episode_length) < 5_000_000:
 
+        curr_reward = 0.0
+
         for _ in range(config.batch_size):
 
             obs = env.reset()
             done = False
             step = 0
-            curr_reward = 0.0
             if config.use_rnn:
                 agent.actor.actor_rnn_hidden = None
                 agent.critic.critic_rnn_hidden = None
@@ -317,7 +318,7 @@ def train_mpe_single(
                 obs = next_obs[0]
                 done = dones[0]
                 if done:
-                    _, _, value = agent.select_action(obs)
+                    _, _, value = agent.select_action([obs])
                     buffer.buffer["state_values"][buffer.episode, -1] = value.cpu()
                 step += 1
             buffer.episode += 1
@@ -334,7 +335,7 @@ def train_mpe_single(
         if logging:
             loss_dict.update(
                 {
-                    "reward": curr_reward,
+                    "reward": curr_reward / batch_size,
                 }
             )
             if episode % (50 * batch_size) == 0:
