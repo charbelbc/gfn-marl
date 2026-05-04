@@ -4,15 +4,11 @@ import numpy as np
 import torch
 import random
 
-from mpe.scenarios.simple_spread import Scenario
-import mpe.environment
-from multiagent.scenarios.simple_spread import Scenario
-import multiagent.environment
 from multiagent.make_env import make_env
 
 
 def my_f():
-    return make_env("simple_spread")
+    return make_env("simple_cn")
 
 
 def worker(remote, parent_remote, env_fn, seed):
@@ -108,10 +104,17 @@ class ReplayBuffer:
 
 
 class MPE_ReplayBuffer:
-    def __init__(self, batch_size: int = 64, ep_limit: int = 50, n_agents: int = 2):
+    def __init__(
+        self,
+        batch_size: int = 64,
+        ep_limit: int = 50,
+        n_agents: int = 2,
+        obs_dim: int = 20,
+    ):
         self.batch_size = batch_size
         self.ep_limit = ep_limit
         self.n_agents = n_agents
+        self.obs_dim = obs_dim
         self.buffer = None
         self.reset_buffer()
 
@@ -120,7 +123,7 @@ class MPE_ReplayBuffer:
     def reset_buffer(self):
         self.buffer = {
             "states": np.zeros(
-                [self.batch_size, self.ep_limit, self.n_agents, 6 * self.n_agents]
+                [self.batch_size, self.ep_limit, self.n_agents, self.obs_dim]
             ),
             "actions": np.zeros(
                 [self.batch_size, self.ep_limit, self.n_agents], dtype=int

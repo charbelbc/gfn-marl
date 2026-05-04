@@ -219,50 +219,12 @@ def orthogonal_init(layer, gain=1.0):
             torch.nn.init.orthogonal_(param, gain=gain)
 
 
-class MPE_ACNetwork(torch.nn.Module):
-
-    def __init__(self, action_dim: int = 5, n_agents: int = 2):
-        super().__init__()
-        self.action_dim = action_dim
-
-        self.actor = torch.nn.Sequential(
-            torch.nn.Linear(6 * n_agents, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, action_dim),
-        )
-
-        self.critic = torch.nn.Sequential(
-            torch.nn.Linear(6 * n_agents * n_agents, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, 64),
-            torch.nn.ReLU(),
-            torch.nn.Linear(64, 1),
-        )
-
-        orthogonal_init(self.actor)
-        orthogonal_init(self.critic)
-
-    def forward(self, observations):
-
-        actor_logits = self.actor(observations)  # .log_softmax(dim=-1)
-        value = self.critic(observations.flatten(1))
-
-        return actor_logits, value
-
-
 class MPE_Actor(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+    def __init__(self, action_dim: int = 5, obs_dim: int = 20):
         super().__init__()
-        self.action_dim = action_dim
         self.actor = torch.nn.Sequential(
-            torch.nn.Linear(6 * n_agents, 64),
+            torch.nn.Linear(obs_dim, 64),
             torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
             torch.nn.Tanh(),
@@ -282,11 +244,10 @@ class MPE_Actor(torch.nn.Module):
 
 class MPE_Critic(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+    def __init__(self, state_dim: int = 20):
         super().__init__()
-        self.action_dim = action_dim
         self.critic = torch.nn.Sequential(
-            torch.nn.Linear(6 * n_agents * n_agents, 64),
+            torch.nn.Linear(state_dim, 64),
             torch.nn.Tanh(),
             torch.nn.Linear(64, 64),
             torch.nn.Tanh(),
@@ -303,17 +264,16 @@ class MPE_Critic(torch.nn.Module):
 
 class MPE_RNN_Actor(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+    def __init__(self, action_dim: int = 5, obs_dim: int = 2):
         super().__init__()
-        self.action_dim = action_dim
 
-        self.actor_1 = torch.nn.Linear(6 * n_agents, 64)
+        self.actor_1 = torch.nn.Linear(obs_dim, 64)
         self.actor_2 = torch.nn.Linear(64, 64)
         self.actor_rnn = torch.nn.GRUCell(64, 64)
         self.actor_3 = torch.nn.Linear(64, action_dim)
         self.activation = torch.nn.Tanh()
         # self.actor_rnn_hidden = None
-        self.feature_norm = torch.nn.LayerNorm(6 * n_agents)
+        self.feature_norm = torch.nn.LayerNorm(obs_dim)
         self.norm_1 = torch.nn.LayerNorm(64)
         self.norm_2 = torch.nn.LayerNorm(64)
         self.norm_3 = torch.nn.LayerNorm(64)
@@ -336,17 +296,16 @@ class MPE_RNN_Actor(torch.nn.Module):
 
 class MPE_RNN_Critic(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, n_agents: int = 2):
+    def __init__(self, state_dim: int = 20):
         super().__init__()
-        self.action_dim = action_dim
 
-        self.critic_1 = torch.nn.Linear(6 * n_agents * n_agents, 64)
+        self.critic_1 = torch.nn.Linear(state_dim, 64)
         self.critic_2 = torch.nn.Linear(64, 64)
         self.critic_rnn = torch.nn.GRUCell(64, 64)
         self.critic_3 = torch.nn.Linear(64, 1)
         self.activation = torch.nn.Tanh()
         # self.critic_rnn_hidden = None
-        self.feature_norm = torch.nn.LayerNorm(6 * n_agents * n_agents)
+        self.feature_norm = torch.nn.LayerNorm(state_dim)
         self.norm_1 = torch.nn.LayerNorm(64)
         self.norm_2 = torch.nn.LayerNorm(64)
         self.norm_3 = torch.nn.LayerNorm(64)

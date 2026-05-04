@@ -132,11 +132,14 @@ def train_mpe(
         minibatch_size=config.minibatch_size,
         normalize_value=config.normalize_value,
         value_clipping=config.value_clipping,
+        obs_dim=config.obs_dim,
+        state_dim=config.state_dim,
     )
     buffer = MPE_ReplayBuffer(
         batch_size=batch_size,
         ep_limit=config.episode_length,
         n_agents=config.num_agents,
+        obs_dim=config.obs_dim,
     )
     # envs = [MPEEnv(config) for _ in range(batch_size)]
     # envs = [make_env("simple_spread") for _ in range(batch_size)]

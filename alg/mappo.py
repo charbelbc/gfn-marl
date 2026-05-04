@@ -235,6 +235,8 @@ class MPE_MAPPO:
         ppo_epochs: int = 10,
         eps_clip: float = 0.2,
         lr: float = 0.001,
+        obs_dim: int = 18,
+        state_dim: int = 18,
         action_dim: int = 5,
         use_rnn: bool = False,
         minibatch_size: int = 8,
@@ -255,22 +257,18 @@ class MPE_MAPPO:
         self.value_clipping = value_clipping
 
         if self.use_rnn:
-            self.actor = MPE_RNN_Actor(action_dim=action_dim, n_agents=n_agents).to(
+            self.actor = MPE_RNN_Actor(action_dim=action_dim, obs_dim=obs_dim).to(
                 self.device
             )
-            self.critic = MPE_RNN_Critic(action_dim=action_dim, n_agents=n_agents).to(
-                self.device
-            )
+            self.critic = MPE_RNN_Critic(state_dim=state_dim).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
         else:
-            self.actor = MPE_Actor(action_dim=action_dim, n_agents=n_agents).to(
+            self.actor = MPE_Actor(action_dim=action_dim, obs_dim=obs_dim).to(
                 self.device
             )
-            self.critic = MPE_Critic(action_dim=action_dim, n_agents=n_agents).to(
-                self.device
-            )
+            self.critic = MPE_Critic(state_dim=state_dim).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
