@@ -3,7 +3,6 @@ import numpy as np
 from common.nets import (
     ACNetwork,
     InstructionsPreprocessor,
-    MPE_ACNetwork,
     MPE_RNN_Actor,
     MPE_RNN_Critic,
     MPE_Actor,
