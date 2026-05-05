@@ -25,3 +25,13 @@ class Config:
     ppo_epochs: int = 15
     eps_clip: float = 0.2
     lr: float = 0.0005
+
+    gfn_dict_size: int = 4
+    gfn_state_size: int = 5
+    gfn_lr: float = 0.001
+    gfn_logz_lr: float = 0.1
+    gfn_dec_lr: float = 0.001
+    gfn_rand_prob: float = 0.3
+    gfn_greedy_decoder: bool = True
+    gfn_use_pb: bool = False
+    gfn_single_codebook: bool = True

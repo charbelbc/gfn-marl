@@ -326,3 +326,31 @@ class MPE_RNN_Critic(torch.nn.Module):
         value = self.critic_3(self.norm_3(critic_memory))
 
         return value.reshape(batch, agents, -1), critic_memory
+
+
+class MLP(torch.nn.Module):
+
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        hidden_sizes: list = [512, 512],
+        activation=torch.nn.ReLU,
+    ):
+
+        super().__init__()
+
+        _net = [torch.nn.Linear(input_size, hidden_sizes[0]), activation()]
+
+        for h1, h2 in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+            _net += [torch.nn.Linear(h1, h2), activation()]
+
+        if len(hidden_sizes) > 1:
+            _net += [torch.nn.Linear(h2, output_size)]
+        else:
+            _net += [torch.nn.Linear(hidden_sizes[-1], output_size)]
+
+        self.net = torch.nn.Sequential(*_net)
+
+    def forward(self, x):
+        return self.net(x)
