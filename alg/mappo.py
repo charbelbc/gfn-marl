@@ -269,9 +269,14 @@ class MPE_GFN_MAPPO:
 
         if self.use_rnn:
             self.actor = MPE_RNN_Actor(
-                action_dim=config.action_dim, obs_dim=config.obs_dim
+                action_dim=config.action_dim,
+                obs_dim=config.obs_dim
+                + (config.num_agents - 1) * config.gfn_state_size,
             ).to(self.device)
-            self.critic = MPE_RNN_Critic(state_dim=config.state_dim).to(self.device)
+            self.critic = MPE_RNN_Critic(
+                state_dim=config.state_dim
+                + config.num_agents * (config.num_agents - 1) * config.gfn_state_size
+            ).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
@@ -288,11 +293,29 @@ class MPE_GFN_MAPPO:
             self.value_norm = ValueNormalizer(shape=self.n_agents)
 
         self.gflownet = EMGFlowNet(device=device, config=config)
+        self.gfn_sampling_exponent = config.gfn_sampling_exponent
 
-    def select_action(self, obs, actor_memory=None, critic_memory=None):
+    def select_action(
+        self,
+        obs,
+        prev_actions,
+        rewards,
+        gfn_memory,
+        actor_memory=None,
+        critic_memory=None,
+    ):
 
         with torch.no_grad():
             obs = torch.from_numpy(np.stack(obs, axis=0)).float().to(self.device)
+            _, latents, next_gfn_memory = self.gflownet.sample_latents(
+                obs,
+                prev_actions,
+                rewards,
+                gfn_memory,
+                rand_prob=0,
+                prob_exponent=self.gfn_sampling_exponent,
+            )
+            obs = torch.cat([obs, latents.flatten(2)], dim=-1)
             if self.use_rnn:
                 logits, actor_memory = self.actor(obs, actor_memory)
                 value, critic_memory = self.critic(
@@ -303,7 +326,15 @@ class MPE_GFN_MAPPO:
                 action = dist.sample()
                 logprobs = dist.log_prob(action)
 
-                return action, logprobs, value.squeeze(), actor_memory, critic_memory
+                return (
+                    action,
+                    logprobs,
+                    value.squeeze(),
+                    actor_memory,
+                    critic_memory,
+                    latents,
+                    next_gfn_memory,
+                )
             else:
                 logits = self.actor(obs)
                 value = self.critic(

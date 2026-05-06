@@ -26,6 +26,7 @@ class Config:
     eps_clip: float = 0.2
     lr: float = 0.0005
 
+    use_gfn: bool = True
     gfn_dict_size: int = 4
     gfn_state_size: int = 5
     gfn_lr: float = 0.001
@@ -35,3 +36,6 @@ class Config:
     gfn_greedy_decoder: bool = True
     gfn_use_pb: bool = False
     gfn_single_codebook: bool = True
+    gfn_sampling_exponent: float = -1
+    gfn_encoder_steps: int = 20
+    gfn_decoder_steps: int = 20

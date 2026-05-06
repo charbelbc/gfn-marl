@@ -3,7 +3,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import random
-
+from common.config import Config
 from multiagent.make_env import make_env
 
 
@@ -60,61 +60,17 @@ class ParallelEnv:
         return results
 
 
-class ReplayBuffer:
-    def __init__(self, batch_size: int = 64, ep_limit: int = 50, n_agents: int = 2):
-        self.batch_size = batch_size
-        self.ep_limit = ep_limit
-        self.n_agents = n_agents
-        self.buffer = None
-        self.reset_buffer()
-
-    def reset_buffer(self):
-        self.buffer = {
-            "states": np.zeros(
-                [self.batch_size, self.ep_limit, self.n_agents, 3, 8, 8]
-            ),
-            "actions": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "log_probs": np.empty([self.batch_size, self.ep_limit, self.n_agents]),
-            "rewards": np.empty([self.batch_size, self.ep_limit]),
-            "state_values": np.empty([self.batch_size, self.ep_limit]),
-            "is_terminals": np.empty([self.batch_size, self.ep_limit]),
-            "lengths": np.empty([self.batch_size]),
-            "instructions": np.empty([self.batch_size], dtype="<U100"),
-        }
-
-    def store_transition(
-        self, step, obs, actions, log_probs, state_values, rewards, dones
-    ):
-        self.buffer["states"][:, step] = torch.stack(
-            [
-                torch.stack(
-                    [
-                        torch.from_numpy(o[0][i]["image"]).permute(2, 0, 1)
-                        for i in range(self.n_agents)
-                    ]
-                )
-                for o in obs
-            ]
-        )
-        self.buffer["actions"][:, step] = actions
-        self.buffer["log_probs"][:, step] = log_probs
-        self.buffer["rewards"][:, step] = rewards
-        self.buffer["state_values"][:, step] = state_values
-        self.buffer["is_terminals"][:, step] = dones
-
-
 class MPE_ReplayBuffer:
     def __init__(
         self,
-        batch_size: int = 64,
-        ep_limit: int = 50,
-        n_agents: int = 2,
-        obs_dim: int = 20,
+        config: Config,
     ):
-        self.batch_size = batch_size
-        self.ep_limit = ep_limit
-        self.n_agents = n_agents
-        self.obs_dim = obs_dim
+        self.batch_size = config.batch_size
+        self.ep_limit = config.episode_length
+        self.n_agents = config.num_agents
+        self.obs_dim = config.obs_dim
+        if config.use_gfn:
+            self.obs_dim += config.gfn_state_size * (config.num_agents - 1)
         self.buffer = None
         self.reset_buffer()
 
@@ -137,33 +93,20 @@ class MPE_ReplayBuffer:
         }
 
     def store_transition(
-        self, step, obs, actions, log_probs, state_values, rewards, dones
+        self, step, obs, actions, log_probs, state_values, rewards, dones, latents=None
     ):
-        self.buffer["states"][:, step] = np.stack(obs, axis=0)
+        if latents is not None:
+            obs = np.concatenate(
+                [np.stack(obs, axis=0), latents.flatten(2).numpy()], axis=-1
+            )
+        else:
+            obs = np.stack(obs, axis=0)
+        self.buffer["states"][:, step] = obs
         self.buffer["actions"][:, step] = actions
         self.buffer["log_probs"][:, step] = log_probs
         self.buffer["rewards"][:, step] = rewards
         self.buffer["state_values"][:, step] = state_values
         self.buffer["is_terminals"][:, step] = dones
-
-    def store_transitionn(
-        self,
-        step,
-        obs,
-        actions,
-        log_probs,
-        state_values,
-        rewards,
-        dones,
-    ):
-        self.buffer["states"][self.episode, step] = torch.from_numpy(
-            np.stack(obs)
-        ).float()
-        self.buffer["actions"][self.episode, step] = actions
-        self.buffer["log_probs"][self.episode, step] = log_probs
-        self.buffer["rewards"][self.episode, step] = rewards
-        self.buffer["state_values"][self.episode, step] = state_values
-        self.buffer["is_terminals"][self.episode, step] = dones
 
 
 class RunningMeanStd:

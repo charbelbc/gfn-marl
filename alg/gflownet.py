@@ -20,9 +20,13 @@ class EMGFlowNet:
         self.greedy_decoder = config.gfn_greedy_decoder
         self.action_dim = config.action_dim
         self.single_codebook = config.gfn_single_codebook
+        self.obs_dim = config.obs_dim
 
         self.dict_size = config.gfn_dict_size
         self.state_size = config.gfn_state_size
+
+        self.encoder_steps = config.gfn_encoder_steps
+        self.decoder_steps = config.gfn_decoder_steps
 
         self.action_encoder = MLP(
             input_size=config.action_dim, output_size=16, hidden_sizes=[32]
@@ -365,7 +369,7 @@ class EMGFlowNet:
     def train_gflownet(self, buffer: MPE_ReplayBuffer):
 
         # shape: [batch, seq, agents, obs_dim]
-        observations = torch.tensor(buffer.buffer["states"])
+        observations = torch.tensor(buffer.buffer["states"])[..., : self.obs_dim]
         batch, seq, agents, _ = observations.shape
 
         # shape: [batch, seq, agents, agents-1, obs_dim]
@@ -448,7 +452,7 @@ class EMGFlowNet:
                         forward_terminal_states.view(
                             batch, agents, agents - 1, self.state_size
                         )
-                    )
+                    ).squeeze(-1)
                 else:
                     z = self.codebook[
                         torch.arange(self.state_size, device=self.device)
@@ -506,7 +510,7 @@ class EMGFlowNet:
     def train_decoder(self, buffer: MPE_ReplayBuffer):
 
         # shape: [batch, seq, agents, obs_dim]
-        observations = torch.tensor(buffer.buffer["states"])
+        observations = torch.tensor(buffer.buffer["states"])[..., : self.obs_dim]
         batch, seq, agents, _ = observations.shape
 
         # shape: [batch, seq, agents, agents-1, obs_dim]
@@ -593,7 +597,7 @@ class EMGFlowNet:
                     forward_terminal_states.view(
                         batch, agents, agents - 1, self.state_size
                     )
-                )
+                ).squeeze(-1)
             else:
                 z = self.codebook[
                     torch.arange(self.state_size, device=self.device)
@@ -713,7 +717,7 @@ class EMGFlowNet:
         if self.single_codebook:
             z = self.codebook(
                 forward_terminal_states.view(batch, agents, agents - 1, self.state_size)
-            )
+            ).squeeze(-1)
         else:
             z = self.codebook[
                 torch.arange(self.state_size, device=self.device)
@@ -724,6 +728,18 @@ class EMGFlowNet:
 
         return (
             z.detach(),
-            forward_terminal_states.detach(),
+            forward_terminal_states.view(
+                batch, agents, agents - 1, self.state_size
+            ).detach(),
             next_gflownet_h.view(batch, agents, agents - 1, -1),
         )
+
+    def update(self, buffer: MPE_ReplayBuffer):
+
+        for _ in range(self.encoder_steps):
+            gfn_loss = self.train_gflownet(buffer)
+
+        for _ in range(self.decoder_steps):
+            decoder_loss = self.train_decoder(buffer)
+
+        return {"gfn_loss": gfn_loss, "gfn_decoder_loss": decoder_loss}
