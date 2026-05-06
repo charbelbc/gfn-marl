@@ -315,7 +315,7 @@ class MPE_GFN_MAPPO:
                 rand_prob=0,
                 prob_exponent=self.gfn_sampling_exponent,
             )
-            obs = torch.cat([obs, latents.flatten(2)], dim=-1)
+            obs = torch.cat([obs, latents.to(self.device).flatten(2)], dim=-1)
             if self.use_rnn:
                 logits, actor_memory = self.actor(obs, actor_memory)
                 value, critic_memory = self.critic(
