@@ -110,10 +110,10 @@ class EMGFlowNet:
         self.latent_layer = MLP(
             input_size=config.gfn_state_size, output_size=32, hidden_sizes=[32]
         ).to(self.device)
-        self.decoder_lstm = torch.nn.GRU(32, 32, batch_first=True)
+        self.decoder_lstm = torch.nn.GRU(32, 32, batch_first=True).to(self.device)
         self.action_decoder = MLP(
             input_size=32, output_size=config.action_dim, hidden_sizes=[64]
-        )
+        ).to(self.device)
 
         self.decoder_optimizer = torch.optim.Adam(
             params=(
