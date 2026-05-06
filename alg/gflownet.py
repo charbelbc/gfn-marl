@@ -451,14 +451,14 @@ class EMGFlowNet:
                     z = self.codebook(
                         forward_terminal_states.view(
                             batch, agents, agents - 1, self.state_size
-                        )
+                        ).to(self.device)
                     ).squeeze(-1)
                 else:
                     z = self.codebook[
                         torch.arange(self.state_size, device=self.device)
                         .unsqueeze(0)
                         .expand(batch * agents * (agents - 1), self.state_size),
-                        forward_terminal_states,
+                        forward_terminal_states.to(self.device),
                     ].view(batch, agents, agents - 1, self.state_size)
 
                 # shape: [batch, agents, agents-1, features]
@@ -596,14 +596,14 @@ class EMGFlowNet:
                 z = self.codebook(
                     forward_terminal_states.view(
                         batch, agents, agents - 1, self.state_size
-                    )
+                    ).to(self.device)
                 ).squeeze(-1)
             else:
                 z = self.codebook[
                     torch.arange(self.state_size, device=self.device)
                     .unsqueeze(0)
                     .expand(batch * agents * (agents - 1), self.state_size),
-                    forward_terminal_states,
+                    forward_terminal_states.to(self.device),
                 ].view(batch, agents, agents - 1, self.state_size)
 
             # shape: [batch, agents, agents-1, features]
@@ -716,14 +716,16 @@ class EMGFlowNet:
 
         if self.single_codebook:
             z = self.codebook(
-                forward_terminal_states.view(batch, agents, agents - 1, self.state_size)
+                forward_terminal_states.view(
+                    batch, agents, agents - 1, self.state_size
+                ).to(self.device)
             ).squeeze(-1)
         else:
             z = self.codebook[
                 torch.arange(self.state_size, device=self.device)
                 .unsqueeze(0)
                 .expand(batch * agents * (agents - 1), self.state_size),
-                forward_terminal_states,
+                forward_terminal_states.to(self.device),
             ].view(batch, agents, agents - 1, self.state_size)
 
         return (
