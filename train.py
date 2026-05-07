@@ -14,6 +14,7 @@ import minigrid
 from multigrid.wrappers import FullyObsWrapper
 
 import wandb
+import os
 
 
 def train_mpe(
@@ -104,11 +105,11 @@ def train_mpe_gfn(
     logging: bool = True,
 ):
 
+    model_dir = "./"
+
     batch_size = config.batch_size
     agent = MPE_GFN_MAPPO(device=device, config=config)
     buffer = MPE_ReplayBuffer(config=config)
-    # envs = [MPEEnv(config) for _ in range(batch_size)]
-    # envs = [make_env("simple_spread") for _ in range(batch_size)]
     env = ParallelEnv(my_f, batch_size)
 
     episode = 0
@@ -189,7 +190,7 @@ def train_mpe_gfn(
         if logging:
             loss_dict.update({"reward": curr_reward})
             if episode % (50 * batch_size) == 0:
-                torch.save(agent.actor.state_dict(), "model")
+                agent.save_model(model_dir, episode * config.episode_length)
             wandb.log(
                 loss_dict,
                 step=episode * config.episode_length,

@@ -9,6 +9,7 @@ from common.nets import (
 from common.utils import MPE_ReplayBuffer
 from common.config import Config
 from alg.gflownet import EMGFlowNet
+import os
 
 
 class ValueNormalizer:
@@ -471,11 +472,19 @@ class MPE_GFN_MAPPO:
         }
         return losses
 
+    def save_model(self, model_dir, step):
 
-def get_gard_norm(it):
-    sum_grad = 0
-    for x in it:
-        if x.grad is None:
-            continue
-        sum_grad += x.grad.norm() ** 2
-    return torch.sqrt(sum_grad)
+        save_dict = {
+            "step": step,
+            "actor": self.actor.state_dict(),
+            "critic": self.critic.state_dict(),
+            "gflownet": self.gflownet.state_dict(),
+        }
+        save_path = os.path.join(model_dir, "model.pth")
+        torch.save(save_dict, save_path)
+
+    def load_model(self, saved_dict):
+
+        self.actor.load_state_dict(saved_dict["actor"])
+        self.critic.load_state_dict(saved_dict["critic"])
+        self.gflownet.load_state_dict(saved_dict["gflownet"])

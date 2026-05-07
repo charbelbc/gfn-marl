@@ -4,7 +4,7 @@ from common.utils import MPE_ReplayBuffer
 from common.config import Config
 
 
-class EMGFlowNet:
+class EMGFlowNet(torch.nn.Module):
 
     def __init__(
         self,
@@ -13,6 +13,7 @@ class EMGFlowNet:
             "cuda" if torch.cuda.is_available() else "cpu"
         ),
     ):
+        super().__init__()
 
         self.device = device
         self.n_actions = config.gfn_state_size * config.gfn_dict_size + 1
@@ -35,10 +36,11 @@ class EMGFlowNet:
             input_size=config.obs_dim + config.num_agents,
             output_size=32,
             hidden_sizes=[32, 32],
+            with_layer_norm=True,
         ).to(self.device)
-        self.reward_encoder = MLP(input_size=1, output_size=16, hidden_sizes=[16]).to(
-            self.device
-        )
+        self.reward_encoder = MLP(
+            input_size=1, output_size=16, hidden_sizes=[16], with_layer_norm=True
+        ).to(self.device)
         self.encoder_lstm = torch.nn.GRUCell(32 + 16 + 16 * config.num_agents, 64).to(
             self.device
         )
@@ -129,9 +131,6 @@ class EMGFlowNet:
             ),
             lr=config.gfn_dec_lr,
         )
-
-    def _get_name(self):
-        return "EMGFlowNet"
 
     def preprocess_states(self, states: torch.Tensor) -> torch.Tensor:
 

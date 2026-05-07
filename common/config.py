@@ -27,11 +27,11 @@ class Config:
     lr: float = 0.0005
 
     use_gfn: bool = True
-    gfn_dict_size: int = 4
-    gfn_state_size: int = 5
-    gfn_lr: float = 0.001
+    gfn_dict_size: int = 3
+    gfn_state_size: int = 3
+    gfn_lr: float = 0.0005
     gfn_logz_lr: float = 0.1
-    gfn_dec_lr: float = 0.001
+    gfn_dec_lr: float = 0.0005
     gfn_rand_prob: float = 0.3
     gfn_greedy_decoder: bool = True
     gfn_use_pb: bool = False

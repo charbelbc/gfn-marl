@@ -336,14 +336,25 @@ class MLP(torch.nn.Module):
         output_size: int,
         hidden_sizes: list = [512, 512],
         activation=torch.nn.ReLU,
+        with_layer_norm: bool = False,
     ):
 
         super().__init__()
 
-        _net = [torch.nn.Linear(input_size, hidden_sizes[0]), activation()]
+        _net = []
+
+        if with_layer_norm:
+            _net += [torch.nn.LayerNorm(input_size)]
+
+        _net += [torch.nn.Linear(input_size, hidden_sizes[0]), activation()]
 
         for h1, h2 in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+            if with_layer_norm:
+                _net += [torch.nn.LayerNorm(h1)]
             _net += [torch.nn.Linear(h1, h2), activation()]
+
+        if with_layer_norm:
+            _net += [torch.nn.LayerNorm(hidden_sizes[-1])]
 
         if len(hidden_sizes) > 1:
             _net += [torch.nn.Linear(h2, output_size)]
