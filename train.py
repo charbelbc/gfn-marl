@@ -22,8 +22,9 @@ def train_mpe(
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     logging: bool = True,
 ):
-    
-    model_dir = "./"
+
+    model_dir = os.path.join("saved_models")
+    os.makedirs(model_dir, exist_ok=True)
 
     batch_size = config.batch_size
     agent = MPE_MAPPO(device=device, config=config)
@@ -105,7 +106,8 @@ def train_mpe_gfn(
     logging: bool = True,
 ):
 
-    model_dir = "./"
+    model_dir = os.path.join("saved_models")
+    os.makedirs(model_dir, exist_ok=True)
 
     batch_size = config.batch_size
     agent = MPE_GFN_MAPPO(device=device, config=config)
