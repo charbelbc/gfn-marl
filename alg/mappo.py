@@ -252,7 +252,7 @@ class MPE_MAPPO:
             "actor": self.actor.state_dict(),
             "critic": self.critic.state_dict(),
         }
-        save_path = os.path.join(model_dir, "model_gfn.pth")
+        save_path = os.path.join(model_dir, "model_mf.pth")
         torch.save(save_dict, save_path)
 
     def load_model(self, saved_dict):
