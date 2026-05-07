@@ -244,7 +244,21 @@ class MPE_MAPPO:
             "critic_grad_norm": critic_grad_norm.item(),
         }
         return losses
+    
+    def save_model(self, model_dir, step):
 
+        save_dict = {
+            "step": step,
+            "actor": self.actor.state_dict(),
+            "critic": self.critic.state_dict(),
+        }
+        save_path = os.path.join(model_dir, "model_gfn.pth")
+        torch.save(save_dict, save_path)
+
+    def load_model(self, saved_dict):
+
+        self.actor.load_state_dict(saved_dict["actor"])
+        self.critic.load_state_dict(saved_dict["critic"])
 
 class MPE_GFN_MAPPO:
 
@@ -480,7 +494,7 @@ class MPE_GFN_MAPPO:
             "critic": self.critic.state_dict(),
             "gflownet": self.gflownet.state_dict(),
         }
-        save_path = os.path.join(model_dir, "model.pth")
+        save_path = os.path.join(model_dir, "model_gfn.pth")
         torch.save(save_dict, save_path)
 
     def load_model(self, saved_dict):

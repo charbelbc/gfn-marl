@@ -22,6 +22,8 @@ def train_mpe(
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     logging: bool = True,
 ):
+    
+    model_dir = "./"
 
     batch_size = config.batch_size
     agent = MPE_MAPPO(device=device, config=config)
@@ -90,9 +92,7 @@ def train_mpe(
         if logging:
             loss_dict.update({"reward": curr_reward})
             if episode % (50 * batch_size) == 0:
-                # test_reward = test_mpe(agent, env, config)
-                # loss_dict.update({"test_reward": test_reward})
-                torch.save(agent.actor.state_dict(), "model")
+                agent.save_model(model_dir, episode * config.episode_length)
             wandb.log(
                 loss_dict,
                 step=episode * config.episode_length,

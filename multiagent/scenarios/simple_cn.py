@@ -17,7 +17,7 @@ class Scenario(BaseScenario):
             agent.name = "agent %d" % i
             agent.collide = True
             agent.silent = True
-            agent.size = 0.45
+            agent.size = 0.65
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
@@ -43,8 +43,21 @@ class Scenario(BaseScenario):
             # landmark.color = np.array([0.25, 0.25, 0.25])
             landmark.color = colors[i]
         # set random initial states
+        placed_positions = []
         for agent in world.agents:
-            agent.state.p_pos = np.random.uniform(-1.5, +1.5, world.dim_p)
+            # agent.state.p_pos = np.random.uniform(-1.5, +1.5, world.dim_p)
+            while True:
+                pos = np.random.uniform(-1.5, +1.5, world.dim_p)
+                collision = False
+                for other_pos, other_agent in placed_positions:
+                    min_dist = agent.size + other_agent.size
+                    if np.linalg.norm(pos - other_pos) < min_dist:
+                        collision = True
+                        break
+                if not collision:
+                    agent.state.p_pos = pos
+                    placed_positions.append((pos, agent))
+                    break
             agent.state.p_vel = np.zeros(world.dim_p)
             agent.state.c = np.zeros(world.dim_c)
         for i, landmark in enumerate(world.landmarks):
@@ -79,21 +92,18 @@ class Scenario(BaseScenario):
         return True if dist < dist_min else False
 
     def reward(self, agent, world):
+        r1, r2, r3 = 1/3, 1, 5
         rew = 0
         for i, a in enumerate(world.agents):
             l = world.landmarks[i]
             dist = np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos)))
-            rew -= dist
-        # for l in world.landmarks:
-        #     dists = [
-        #         np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos)))
-        #         for a in world.agents
-        #     ]
-        #     rew -= min(dists)
+            rew -= dist*r1
+            if dist < 0.2:
+                rew += 1*r2        
         if agent.collide:
             for a in world.agents:
                 if self.is_collision(a, agent):
-                    rew -= 1
+                    rew -= 1*r3
         return rew
 
     def observation(self, agent, world):
