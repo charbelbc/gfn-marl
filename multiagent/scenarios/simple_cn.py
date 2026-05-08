@@ -97,8 +97,12 @@ class Scenario(BaseScenario):
             l = world.landmarks[i]
             dist = np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos)))
             rew -= (1 / 3) * dist
+            if dist < 0.3:
+                rew += 3
         if agent.collide:
             for a in world.agents:
+                if a is agent:
+                    continue
                 if self.is_collision(a, agent):
                     rew -= 10
         return rew
