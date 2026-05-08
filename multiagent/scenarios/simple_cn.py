@@ -92,18 +92,15 @@ class Scenario(BaseScenario):
         return True if dist < dist_min else False
 
     def reward(self, agent, world):
-        r1, r2, r3 = 1/3, 1, 5
         rew = 0
         for i, a in enumerate(world.agents):
             l = world.landmarks[i]
             dist = np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos)))
-            rew -= dist*r1
-            if dist < 0.2:
-                rew += 1*r2        
+            rew -= (1 / 3) * dist
         if agent.collide:
             for a in world.agents:
                 if self.is_collision(a, agent):
-                    rew -= 1*r3
+                    rew -= 10
         return rew
 
     def observation(self, agent, world):
@@ -130,6 +127,6 @@ class Scenario(BaseScenario):
             + entity_pos
             + entity_color
             + other_pos
-            + other_color
-            + comm
+            # + other_color
+            # + comm
         )
