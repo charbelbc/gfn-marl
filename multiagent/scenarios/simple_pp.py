@@ -81,7 +81,7 @@ class Scenario(BaseScenario):
 
     def reward(self, agent, world):
 
-        rew = 0
+        rew = 0.0
 
         # check captures
         for prey in world.landmarks:
