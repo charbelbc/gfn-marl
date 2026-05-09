@@ -8,7 +8,7 @@ class Scenario(BaseScenario):
     def make_world(self):
         world = World()
 
-        self.num_predators = 3  # N
+        self.num_predators = 4  # N
         self.num_preys = 9  # M
         self.capture_requirement = 2  # C
         self.capture_radius = 0.3
