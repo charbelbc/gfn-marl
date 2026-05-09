@@ -16,8 +16,8 @@ class Config:
     normalize_value: bool = True
     value_clipping: bool = False
     reward_normalization: bool = False
-    obs_dim: int = 26
-    state_dim: int = 3 * 26
+    obs_dim: int = 35
+    state_dim: int = 3 * 35
 
     # PPO parameters
     gamma: float = 0.99
