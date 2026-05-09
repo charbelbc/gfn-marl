@@ -31,7 +31,7 @@ def train_mpe(
     buffer = MPE_ReplayBuffer(config=config)
     # envs = [MPEEnv(config) for _ in range(batch_size)]
     # envs = [make_env("simple_spread") for _ in range(batch_size)]
-    env = ParallelEnv(my_f, batch_size)
+    env = ParallelEnv(my_f, config, batch_size)
 
     episode = 0
     if config.reward_normalization:
@@ -112,7 +112,7 @@ def train_mpe_gfn(
     batch_size = config.batch_size
     agent = MPE_GFN_MAPPO(device=device, config=config)
     buffer = MPE_ReplayBuffer(config=config)
-    env = ParallelEnv(my_f, batch_size)
+    env = ParallelEnv(my_f, config, batch_size)
 
     episode = 0
     if config.reward_normalization:

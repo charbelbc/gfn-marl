@@ -8,6 +8,7 @@ class Config:
     scenario_name: str = "simple_spread"
     num_agents: int = 4
     num_landmarks: int = 3
+    capture_requirement: int = 2
     episode_length: int = 35
     action_dim: int = 5
     batch_size: int = 64

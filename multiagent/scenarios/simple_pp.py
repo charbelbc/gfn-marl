@@ -5,16 +5,17 @@ from multiagent.scenario import BaseScenario
 
 class Scenario(BaseScenario):
 
-    def make_world(self):
+    def make_world(self, config):
         world = World()
 
-        self.num_predators = 4  # N
+        self.num_predators = config.num_agents  # N
         self.num_preys = 9  # M
-        self.capture_requirement = 2  # C
+        self.capture_requirement = config.capture_requirement  # C
         self.capture_radius = 0.3
         self.reward_value = 1
         world.dim_c = 2
         world.collaborative = True
+        world.episode_length = config.episode_length
 
         world.agents = [Agent() for _ in range(self.num_predators)]
         for i, agent in enumerate(world.agents):

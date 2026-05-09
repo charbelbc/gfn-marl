@@ -45,7 +45,7 @@ class MultiAgentEnv(gym.Env):
         )
         self.time = 0
         self.current_step = 0
-        self.world_length = 35
+        self.world_length = world.episode_length
 
         # configure spaces
         self.action_space = []

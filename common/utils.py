@@ -7,15 +7,15 @@ from common.config import Config
 from multiagent.make_env import make_env
 
 
-def my_f():
-    return make_env("simple_pp")
+def my_f(config):
+    return make_env("simple_pp", config)
 
 
-def worker(remote, parent_remote, env_fn, seed):
+def worker(remote, parent_remote, env_fn, config, seed):
     parent_remote.close()
     np.random.seed(seed)
     random.seed(seed)
-    env = env_fn()
+    env = env_fn(config)
     while True:
         cmd, data = remote.recv()
         if cmd == "step":
@@ -31,7 +31,7 @@ def worker(remote, parent_remote, env_fn, seed):
 
 
 class ParallelEnv:
-    def __init__(self, env_fn, n_envs, base_seed=42):
+    def __init__(self, env_fn, config, n_envs, base_seed=42):
         self.n_envs = n_envs
 
         self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_envs)])
@@ -39,7 +39,7 @@ class ParallelEnv:
         self.processes = []
         for i, (work_remote, remote) in enumerate(zip(self.work_remotes, self.remotes)):
             seed = base_seed + i
-            p = Process(target=worker, args=(work_remote, remote, env_fn, seed))
+            p = Process(target=worker, args=(work_remote, remote, env_fn, config, seed))
             p.daemon = True
             p.start()
             work_remote.close()
