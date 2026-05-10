@@ -62,5 +62,5 @@ class Config:
     gfn_use_pb: bool = False
     gfn_single_codebook: bool = True
     gfn_sampling_exponent: float = -1
-    gfn_encoder_steps: int = 20
-    gfn_decoder_steps: int = 20
+    gfn_encoder_steps: int = 10
+    gfn_decoder_steps: int = 1
