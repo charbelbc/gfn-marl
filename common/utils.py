@@ -33,6 +33,9 @@ def worker(remote, parent_remote, env_fn, config, seed):
 class ParallelEnv:
     def __init__(self, env_fn, config, n_envs, base_seed=42):
         self.n_envs = n_envs
+        env = env_fn(config)
+        self.obs_dim = env.observation_space[0].shape[0]
+        env.close()
 
         self.remotes, self.work_remotes = zip(*[Pipe() for _ in range(n_envs)])
 

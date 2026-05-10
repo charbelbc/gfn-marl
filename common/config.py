@@ -8,10 +8,10 @@ from typing import Dict
 class Config:
 
     scenario_name: str = "simple_spread"
-    num_agents: int = 4
+    num_agents: int = 2
     num_landmarks: int = 3
-    capture_requirement: int = 2
-    episode_length: int = 35
+    capture_requirement: int = 1
+    episode_length: int = 70
     action_dim: int = 5
     batch_size: int = 64
     minibatch_size: int = 64
