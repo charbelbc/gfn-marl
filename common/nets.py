@@ -215,7 +215,7 @@ def orthogonal_init(layer, gain=1.0):
     for name, param in layer.named_parameters():
         if "bias" in name:
             torch.nn.init.constant_(param, 0)
-        elif "weight" in name:
+        elif "weight" in name and len(param.shape) > 1:
             torch.nn.init.orthogonal_(param, gain=gain)
 
 
@@ -264,66 +264,111 @@ class MPE_Critic(torch.nn.Module):
 
 class MPE_RNN_Actor(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, obs_dim: int = 2):
+    def __init__(self, config):
         super().__init__()
 
-        self.actor_1 = torch.nn.Linear(obs_dim, 64)
-        self.actor_2 = torch.nn.Linear(64, 64)
-        self.actor_rnn = torch.nn.GRUCell(64, 64)
-        self.actor_3 = torch.nn.Linear(64, action_dim)
-        self.activation = torch.nn.Tanh()
-        # self.actor_rnn_hidden = None
-        self.feature_norm = torch.nn.LayerNorm(obs_dim)
-        self.norm_1 = torch.nn.LayerNorm(64)
-        self.norm_2 = torch.nn.LayerNorm(64)
-        self.norm_3 = torch.nn.LayerNorm(64)
+        self.fc = MLP(
+            input_size=config.obs_dim,
+            output_size=config.actor["memory_size"],
+            hidden_sizes=config.actor["in_fc_layers"],
+            activation=config.actor["activation"],
+            with_feature_norm=config.actor["use_feature_norm"],
+            with_layer_norm=config.actor["use_layer_norm"],
+        )
+        self.mem_norm = torch.nn.LayerNorm(config.actor["in_fc_layers"][-1])
+        self.rnn = torch.nn.GRUCell(
+            config.actor["in_fc_layers"][-1], config.actor["memory_size"]
+        )
+        self.out = MLP(
+            input_size=config.actor["memory_size"],
+            output_size=config.action_dim,
+            hidden_sizes=config.actor["out_fc_layers"],
+            with_feature_norm=config.actor["use_layer_norm"],
+            with_layer_norm=False,
+        )
 
-        orthogonal_init(self.actor_1)
-        orthogonal_init(self.actor_2)
-        orthogonal_init(self.actor_rnn)
-        orthogonal_init(self.actor_3, gain=0.01)
+        if config.use_gfn:
+            self.film_layer = MLP(
+                input_size=config.gfn_state_size * (config.num_agents - 1),
+                output_size=config.actor["memory_size"],
+                hidden_sizes=[],
+                with_feature_norm=True,
+            )
+            orthogonal_init(self.film_layer)
 
-    def forward(self, observations, actor_rnn_hidden):
+        orthogonal_init(self.fc)
+        orthogonal_init(self.rnn)
+        orthogonal_init(self.out)
+        orthogonal_init(self.out.net[-1], gain=0.01)
+
+    def forward(self, observations, actor_rnn_hidden, latents=None):
 
         batch, agents, features = observations.shape
-        x = self.activation(self.actor_1(self.feature_norm(observations.flatten(0, 1))))
-        x = self.activation(self.actor_2(self.norm_1(x)))
-        actor_memory = self.actor_rnn(self.norm_2(x), actor_rnn_hidden)
-        actor_logits = self.actor_3(self.norm_3(actor_memory))
+        x = self.fc(observations.flatten(0, 1))
+        actor_memory = self.rnn(self.mem_norm(x), actor_rnn_hidden.flatten(0, 1)).view(
+            batch, agents, -1
+        )
+        if latents is not None:
+            gamma = 1 + self.film_layer(latents.flatten(2))
+            actor_logits = self.out(actor_memory * gamma)
+        else:
+            actor_logits = self.out(actor_memory)
 
         return actor_logits.reshape(batch, agents, -1).log_softmax(-1), actor_memory
 
 
 class MPE_RNN_Critic(torch.nn.Module):
 
-    def __init__(self, state_dim: int = 20):
+    def __init__(self, config):
         super().__init__()
 
-        self.critic_1 = torch.nn.Linear(state_dim, 64)
-        self.critic_2 = torch.nn.Linear(64, 64)
-        self.critic_rnn = torch.nn.GRUCell(64, 64)
-        self.critic_3 = torch.nn.Linear(64, 1)
-        self.activation = torch.nn.Tanh()
-        # self.critic_rnn_hidden = None
-        self.feature_norm = torch.nn.LayerNorm(state_dim)
-        self.norm_1 = torch.nn.LayerNorm(64)
-        self.norm_2 = torch.nn.LayerNorm(64)
-        self.norm_3 = torch.nn.LayerNorm(64)
+        self.fc = MLP(
+            input_size=config.state_dim,
+            output_size=config.critic["memory_size"],
+            hidden_sizes=config.critic["in_fc_layers"],
+            activation=config.critic["activation"],
+            with_feature_norm=config.critic["use_feature_norm"],
+            with_layer_norm=config.critic["use_layer_norm"],
+        )
+        self.mem_norm = torch.nn.LayerNorm(config.critic["in_fc_layers"][-1])
+        self.rnn = torch.nn.GRUCell(
+            config.critic["in_fc_layers"][-1], config.critic["memory_size"]
+        )
+        self.out = MLP(
+            input_size=config.critic["memory_size"],
+            output_size=1,
+            hidden_sizes=config.critic["out_fc_layers"],
+            with_feature_norm=config.critic["use_layer_norm"],
+            with_layer_norm=False,
+        )
 
-        orthogonal_init(self.critic_1)
-        orthogonal_init(self.critic_2)
-        orthogonal_init(self.critic_rnn)
-        orthogonal_init(self.critic_3)
+        if config.use_gfn:
+            self.film_layer = MLP(
+                input_size=config.gfn_state_size
+                * (config.num_agents - 1)
+                * config.num_agents,
+                output_size=config.actor["memory_size"],
+                hidden_sizes=[],
+                with_feature_norm=True,
+            )
+            orthogonal_init(self.film_layer)
 
-    def forward(self, observations, critic_rnn_hidden):
+        orthogonal_init(self.fc)
+        orthogonal_init(self.rnn)
+        orthogonal_init(self.out)
+
+    def forward(self, observations, critic_rnn_hidden, latents=None):
 
         batch, agents, features = observations.shape
-        y = self.activation(
-            self.critic_1(self.feature_norm(observations.flatten(0, 1)))
-        )
-        y = self.activation(self.critic_2(self.norm_1(y)))
-        critic_memory = self.critic_rnn(self.norm_2(y), critic_rnn_hidden)
-        value = self.critic_3(self.norm_3(critic_memory))
+        x = self.fc(observations.flatten(0, 1))
+        critic_memory = self.rnn(
+            self.mem_norm(x), critic_rnn_hidden.flatten(0, 1)
+        ).view(batch, agents, -1)
+        if latents is not None:
+            gamma = 1 + self.film_layer(latents.flatten(2))
+            value = self.out(critic_memory * gamma)
+        else:
+            value = self.out(critic_memory)
 
         return value.reshape(batch, agents, -1), critic_memory
 
@@ -336,6 +381,7 @@ class MLP(torch.nn.Module):
         output_size: int,
         hidden_sizes: list = [512, 512],
         activation=torch.nn.ReLU,
+        with_feature_norm: bool = False,
         with_layer_norm: bool = False,
     ):
 
@@ -343,23 +389,29 @@ class MLP(torch.nn.Module):
 
         _net = []
 
-        if with_layer_norm:
+        if with_feature_norm:
             _net += [torch.nn.LayerNorm(input_size)]
 
-        _net += [torch.nn.Linear(input_size, hidden_sizes[0]), activation()]
+        if len(hidden_sizes) > 0:
 
-        for h1, h2 in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+            _net += [torch.nn.Linear(input_size, hidden_sizes[0]), activation()]
+
+            for h1, h2 in zip(hidden_sizes[:-1], hidden_sizes[1:]):
+                if with_layer_norm:
+                    _net += [torch.nn.LayerNorm(h1)]
+                _net += [torch.nn.Linear(h1, h2), activation()]
+
             if with_layer_norm:
-                _net += [torch.nn.LayerNorm(h1)]
-            _net += [torch.nn.Linear(h1, h2), activation()]
+                _net += [torch.nn.LayerNorm(hidden_sizes[-1])]
 
-        if with_layer_norm:
-            _net += [torch.nn.LayerNorm(hidden_sizes[-1])]
+            if len(hidden_sizes) > 1:
+                _net += [torch.nn.Linear(h2, output_size)]
+            else:
+                _net += [torch.nn.Linear(hidden_sizes[-1], output_size)]
 
-        if len(hidden_sizes) > 1:
-            _net += [torch.nn.Linear(h2, output_size)]
         else:
-            _net += [torch.nn.Linear(hidden_sizes[-1], output_size)]
+
+            _net += [torch.nn.Linear(input_size, output_size)]
 
         self.net = torch.nn.Sequential(*_net)
 

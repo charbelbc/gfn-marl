@@ -45,8 +45,12 @@ def train_mpe(
         step = 0
         curr_reward = 0.0
         if config.use_rnn:
-            actor_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
-            critic_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
+            actor_memory = torch.zeros(
+                batch_size, config.num_agents, config.actor["memory_size"]
+            ).to(device)
+            critic_memory = torch.zeros(
+                batch_size, config.num_agents, config.critic["memory_size"]
+            ).to(device)
 
         for _ in range(config.episode_length):
             if config.use_rnn:
@@ -125,8 +129,12 @@ def train_mpe_gfn(
         step = 0
         curr_reward = 0.0
         if config.use_rnn:
-            actor_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
-            critic_memory = torch.zeros(batch_size * config.num_agents, 64).to(device)
+            actor_memory = torch.zeros(
+                batch_size, config.num_agents, config.actor["memory_size"]
+            ).to(device)
+            critic_memory = torch.zeros(
+                batch_size, config.num_agents, config.critic["memory_size"]
+            ).to(device)
         gfn_memory = torch.zeros(
             batch_size, config.num_agents, (config.num_agents - 1), 64
         ).to(agent.device)

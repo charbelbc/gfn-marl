@@ -1,5 +1,7 @@
 import numpy as np
+import torch
 from dataclasses import dataclass, field
+from typing import Dict
 
 
 @dataclass
@@ -19,6 +21,28 @@ class Config:
     reward_normalization: bool = False
     obs_dim: int = 37
     state_dim: int = num_agents * obs_dim
+
+    actor: Dict = field(
+        default_factory=lambda: {
+            "in_fc_layers": [64, 64],
+            "memory_size": 64,
+            "activation": torch.nn.Tanh,
+            "use_feature_norm": True,
+            "use_layer_norm": True,
+            "out_fc_layers": [],
+        }
+    )
+
+    critic: Dict = field(
+        default_factory=lambda: {
+            "in_fc_layers": [64, 64],
+            "memory_size": 64,
+            "activation": torch.nn.Tanh,
+            "use_feature_norm": True,
+            "use_layer_norm": True,
+            "out_fc_layers": [],
+        }
+    )
 
     # PPO parameters
     gamma: float = 0.99

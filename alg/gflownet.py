@@ -36,10 +36,15 @@ class EMGFlowNet(torch.nn.Module):
             input_size=config.obs_dim + config.num_agents,
             output_size=32,
             hidden_sizes=[32, 32],
+            with_feature_norm=True,
             with_layer_norm=True,
         ).to(self.device)
         self.reward_encoder = MLP(
-            input_size=1, output_size=16, hidden_sizes=[16], with_layer_norm=True
+            input_size=1,
+            output_size=16,
+            hidden_sizes=[16],
+            with_feature_norm=True,
+            with_layer_norm=True,
         ).to(self.device)
         self.encoder_lstm = torch.nn.GRUCell(32 + 16 + 16 * config.num_agents, 64).to(
             self.device

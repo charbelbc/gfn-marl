@@ -69,8 +69,9 @@ class MPE_ReplayBuffer:
         self.ep_limit = config.episode_length
         self.n_agents = config.num_agents
         self.obs_dim = config.obs_dim
-        if config.use_gfn:
-            self.obs_dim += config.gfn_state_size * (config.num_agents - 1)
+        self.gfn_state_size = config.gfn_state_size
+        # if config.use_gfn:
+        # self.obs_dim += config.gfn_state_size * (config.num_agents - 1)
         self.buffer = None
         self.reset_buffer()
 
@@ -90,23 +91,31 @@ class MPE_ReplayBuffer:
                 [self.batch_size, self.ep_limit + 1, self.n_agents]
             ),
             "is_terminals": np.zeros([self.batch_size, self.ep_limit, self.n_agents]),
+            "latents": np.zeros(
+                [
+                    self.batch_size,
+                    self.ep_limit,
+                    self.n_agents,
+                    self.n_agents - 1,
+                    self.gfn_state_size,
+                ],
+                dtype=float,
+            ),
         }
 
     def store_transition(
         self, step, obs, actions, log_probs, state_values, rewards, dones, latents=None
     ):
-        if latents is not None:
-            obs = np.concatenate(
-                [np.stack(obs, axis=0), latents.flatten(2).numpy()], axis=-1
-            )
-        else:
-            obs = np.stack(obs, axis=0)
+
+        obs = np.stack(obs, axis=0)
         self.buffer["states"][:, step] = obs
         self.buffer["actions"][:, step] = actions
         self.buffer["log_probs"][:, step] = log_probs
         self.buffer["rewards"][:, step] = rewards
         self.buffer["state_values"][:, step] = state_values
         self.buffer["is_terminals"][:, step] = dones
+        if latents is not None:
+            self.buffer["latents"][:, step] = latents.numpy()
 
 
 class RunningMeanStd:

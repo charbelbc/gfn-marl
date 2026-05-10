@@ -75,10 +75,8 @@ class MPE_MAPPO:
         self.value_clipping = config.value_clipping
 
         if self.use_rnn:
-            self.actor = MPE_RNN_Actor(
-                action_dim=config.action_dim, obs_dim=config.obs_dim
-            ).to(self.device)
-            self.critic = MPE_RNN_Critic(state_dim=config.state_dim).to(self.device)
+            self.actor = MPE_RNN_Actor(config).to(self.device)
+            self.critic = MPE_RNN_Critic(config).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
@@ -164,10 +162,10 @@ class MPE_MAPPO:
 
                 if self.use_rnn:
                     actor_memory = torch.zeros(
-                        self.minibatch_size * self.n_agents, 64
+                        self.minibatch_size, self.n_agents, 64
                     ).to(self.device)
                     critic_memory = torch.zeros(
-                        self.minibatch_size * self.n_agents, 64
+                        self.minibatch_size, self.n_agents, 64
                     ).to(self.device)
                     logits_now, values_now = [], []
                     for t in range(max_T):
@@ -244,7 +242,7 @@ class MPE_MAPPO:
             "critic_grad_norm": critic_grad_norm.item(),
         }
         return losses
-    
+
     def save_model(self, model_dir, step):
 
         save_dict = {
@@ -259,6 +257,7 @@ class MPE_MAPPO:
 
         self.actor.load_state_dict(saved_dict["actor"])
         self.critic.load_state_dict(saved_dict["critic"])
+
 
 class MPE_GFN_MAPPO:
 
@@ -283,15 +282,8 @@ class MPE_GFN_MAPPO:
         self.value_clipping = config.value_clipping
 
         if self.use_rnn:
-            self.actor = MPE_RNN_Actor(
-                action_dim=config.action_dim,
-                obs_dim=config.obs_dim
-                + (config.num_agents - 1) * config.gfn_state_size,
-            ).to(self.device)
-            self.critic = MPE_RNN_Critic(
-                state_dim=config.state_dim
-                + config.num_agents * (config.num_agents - 1) * config.gfn_state_size
-            ).to(self.device)
+            self.actor = MPE_RNN_Actor(config).to(self.device)
+            self.critic = MPE_RNN_Critic(config).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
@@ -330,12 +322,17 @@ class MPE_GFN_MAPPO:
                 rand_prob=0,
                 prob_exponent=self.gfn_sampling_exponent,
             )
-            obs = torch.cat([obs, latents.to(self.device).flatten(2)], dim=-1)
             if self.use_rnn:
-                logits, actor_memory = self.actor(obs, actor_memory)
+                logits, actor_memory = self.actor(
+                    obs, actor_memory, latents.float().to(self.device)
+                )
                 value, critic_memory = self.critic(
                     obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1),
                     critic_memory,
+                    latents.unsqueeze(1)
+                    .repeat_interleave(self.n_agents, 1)
+                    .float()
+                    .to(self.device),
                 )
                 dist = torch.distributions.Categorical(logits=logits)
                 action = dist.sample()
@@ -394,6 +391,7 @@ class MPE_GFN_MAPPO:
         old_states = torch.tensor(buffer.buffer["states"]).to(self.device)
         old_actions = torch.tensor(buffer.buffer["actions"]).to(self.device)
         old_logprobs = torch.tensor(buffer.buffer["log_probs"]).detach().to(self.device)
+        latents = torch.tensor(buffer.buffer["latents"]).detach().to(self.device)
 
         for _ in range(self.ppo_epochs):
 
@@ -405,15 +403,17 @@ class MPE_GFN_MAPPO:
 
                 if self.use_rnn:
                     actor_memory = torch.zeros(
-                        self.minibatch_size * self.n_agents, 64
+                        self.minibatch_size, self.n_agents, 64
                     ).to(self.device)
                     critic_memory = torch.zeros(
-                        self.minibatch_size * self.n_agents, 64
+                        self.minibatch_size, self.n_agents, 64
                     ).to(self.device)
                     logits_now, values_now = [], []
                     for t in range(max_T):
                         logits, actor_memory = self.actor(
-                            old_states[index, t].float(), actor_memory
+                            old_states[index, t].float(),
+                            actor_memory,
+                            latents[index, t].float(),
                         )
                         value, critic_memory = self.critic(
                             old_states[index, t]
@@ -422,6 +422,10 @@ class MPE_GFN_MAPPO:
                             .repeat(1, self.n_agents, 1)
                             .float(),
                             critic_memory,
+                            latents[index, t]
+                            .unsqueeze(1)
+                            .repeat_interleave(self.n_agents, 1)
+                            .float(),
                         )
                         logits_now.append(logits)
                         values_now.append(value.squeeze(-1))
