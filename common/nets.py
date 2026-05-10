@@ -221,21 +221,16 @@ def orthogonal_init(layer, gain=1.0):
 
 class MPE_Actor(torch.nn.Module):
 
-    def __init__(self, action_dim: int = 5, obs_dim: int = 20):
+    def __init__(self, config):
         super().__init__()
-        self.actor = torch.nn.Sequential(
-            torch.nn.Linear(obs_dim, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, action_dim),
+        self.fc = MLP(
+            input_size=config.obs_dim,
+            output_size=config.actor["memory_size"],
+            hidden_sizes=config.actor["in_fc_layers"],
+            activation=config.actor["activation"],
+            with_feature_norm=config.actor["use_feature_norm"],
+            with_layer_norm=config.actor["use_layer_norm"],
         )
-        orthogonal_init(self.actor[0])
-        orthogonal_init(self.actor[2])
-        orthogonal_init(self.actor[4])
-        orthogonal_init(self.actor[6], gain=0.01)
 
     def forward(self, observations):
         actor_logits = self.actor(observations)
@@ -275,9 +270,9 @@ class MPE_RNN_Actor(torch.nn.Module):
             with_feature_norm=config.actor["use_feature_norm"],
             with_layer_norm=config.actor["use_layer_norm"],
         )
-        self.mem_norm = torch.nn.LayerNorm(config.actor["in_fc_layers"][-1])
+        self.mem_norm = torch.nn.LayerNorm(config.actor["memory_size"])
         self.rnn = torch.nn.GRUCell(
-            config.actor["in_fc_layers"][-1], config.actor["memory_size"]
+            config.actor["memory_size"], config.actor["memory_size"]
         )
         self.out = MLP(
             input_size=config.actor["memory_size"],
@@ -294,12 +289,14 @@ class MPE_RNN_Actor(torch.nn.Module):
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
-            orthogonal_init(self.film_layer)
+            if config.actor["orthogonal_init"]:
+                orthogonal_init(self.film_layer)
 
-        orthogonal_init(self.fc)
-        orthogonal_init(self.rnn)
-        orthogonal_init(self.out)
-        orthogonal_init(self.out.net[-1], gain=0.01)
+        if config.actor["orthogonal_init"]:
+            orthogonal_init(self.fc)
+            orthogonal_init(self.rnn)
+            orthogonal_init(self.out)
+            orthogonal_init(self.out.net[-1], gain=0.01)
 
     def forward(self, observations, actor_rnn_hidden, latents=None):
 
@@ -330,9 +327,9 @@ class MPE_RNN_Critic(torch.nn.Module):
             with_feature_norm=config.critic["use_feature_norm"],
             with_layer_norm=config.critic["use_layer_norm"],
         )
-        self.mem_norm = torch.nn.LayerNorm(config.critic["in_fc_layers"][-1])
+        self.mem_norm = torch.nn.LayerNorm(config.critic["memory_size"])
         self.rnn = torch.nn.GRUCell(
-            config.critic["in_fc_layers"][-1], config.critic["memory_size"]
+            config.critic["memory_size"], config.critic["memory_size"]
         )
         self.out = MLP(
             input_size=config.critic["memory_size"],
@@ -351,11 +348,13 @@ class MPE_RNN_Critic(torch.nn.Module):
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
-            orthogonal_init(self.film_layer)
+            if config.critic["orthogonal_init"]:
+                orthogonal_init(self.film_layer)
 
-        orthogonal_init(self.fc)
-        orthogonal_init(self.rnn)
-        orthogonal_init(self.out)
+        if config.critic["orthogonal_init"]:
+            orthogonal_init(self.fc)
+            orthogonal_init(self.rnn)
+            orthogonal_init(self.out)
 
     def forward(self, observations, critic_rnn_hidden, latents=None):
 

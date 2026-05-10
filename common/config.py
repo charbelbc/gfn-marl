@@ -30,6 +30,7 @@ class Config:
             "use_feature_norm": True,
             "use_layer_norm": True,
             "out_fc_layers": [],
+            "orthogonal_init": True,
         }
     )
 
@@ -41,6 +42,7 @@ class Config:
             "use_feature_norm": True,
             "use_layer_norm": True,
             "out_fc_layers": [],
+            "orthogonal_init": True,
         }
     )
 
