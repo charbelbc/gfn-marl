@@ -8,7 +8,7 @@ from multiagent.make_env import make_env
 
 
 def my_f(config):
-    return make_env("simple_pp", config)
+    return make_env("simple_cn", config)
 
 
 def worker(remote, parent_remote, env_fn, config, seed):
