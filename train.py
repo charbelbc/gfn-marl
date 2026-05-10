@@ -27,13 +27,11 @@ def train_mpe(
     os.makedirs(model_dir, exist_ok=True)
 
     batch_size = config.batch_size
-    agent = MPE_MAPPO(device=device, config=config)
-    buffer = MPE_ReplayBuffer(config=config)
-    # envs = [MPEEnv(config) for _ in range(batch_size)]
-    # envs = [make_env("simple_spread") for _ in range(batch_size)]
     env = ParallelEnv(my_f, config, batch_size)
     config.obs_dim = env.obs_dim
     config.state_dim = env.obs_dim * config.num_agents
+    agent = MPE_MAPPO(device=device, config=config)
+    buffer = MPE_ReplayBuffer(config=config)
 
     episode = 0
     if config.reward_normalization:
@@ -116,11 +114,11 @@ def train_mpe_gfn(
     os.makedirs(model_dir, exist_ok=True)
 
     batch_size = config.batch_size
-    agent = MPE_GFN_MAPPO(device=device, config=config)
-    buffer = MPE_ReplayBuffer(config=config)
     env = ParallelEnv(my_f, config, batch_size)
     config.obs_dim = env.obs_dim
     config.state_dim = env.obs_dim * config.num_agents
+    agent = MPE_GFN_MAPPO(device=device, config=config)
+    buffer = MPE_ReplayBuffer(config=config)
 
     episode = 0
     if config.reward_normalization:
