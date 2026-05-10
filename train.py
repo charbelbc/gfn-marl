@@ -25,9 +25,11 @@ def train_mpe(
 
     model_dir = os.path.join("saved_models")
     os.makedirs(model_dir, exist_ok=True)
+    seed = torch.random.randint(1_000_000)
 
     batch_size = config.batch_size
-    env = ParallelEnv(my_f, config, batch_size)
+    env = ParallelEnv(my_f, config, batch_size, seed)
+    config.seed = seed
     config.obs_dim = env.obs_dim
     config.state_dim = env.obs_dim * config.num_agents
     agent = MPE_MAPPO(device=device, config=config)
@@ -112,9 +114,11 @@ def train_mpe_gfn(
 
     model_dir = os.path.join("saved_models")
     os.makedirs(model_dir, exist_ok=True)
+    seed = torch.random.randint(1_000_000)
 
     batch_size = config.batch_size
     env = ParallelEnv(my_f, config, batch_size)
+    config.seed = seed
     config.obs_dim = env.obs_dim
     config.state_dim = env.obs_dim * config.num_agents
     agent = MPE_GFN_MAPPO(device=device, config=config)
