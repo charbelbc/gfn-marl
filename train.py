@@ -4,14 +4,13 @@ from common.config import Config
 import gymnasium as gym
 from alg.mappo import MPE_GFN_MAPPO, MPE_MAPPO
 from common.utils import ParallelEnv, MPE_ReplayBuffer, my_f
-from mpe.MPE_env import MPEEnv
-from multiagent.make_env import make_env
+from env.multiagent.make_env import make_env
 from common.utils import Normalization
 
-import multigrid.envs
+import env.multigrid.envs
 import gymnasium as gym
 import minigrid
-from multigrid.wrappers import FullyObsWrapper
+from env.multigrid.wrappers import FullyObsWrapper
 
 import wandb
 import os

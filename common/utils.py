@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import random
 from common.config import Config
-from multiagent.make_env import make_env
+from env.multiagent.make_env import make_env
 
 
 def my_f(config):
