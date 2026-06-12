@@ -64,8 +64,8 @@ class Config:
     gfn_dec_lr: float = 0.0005
     gfn_rand_prob: float = 0.3
     gfn_greedy_decoder: bool = True
-    gfn_use_pb: bool = False
-    gfn_ar_policy: bool = True
+    gfn_use_pb: bool = True
+    gfn_ar_policy: bool = False
     gfn_single_codebook: bool = True
     gfn_sampling_exponent: float = 1
     gfn_num_samples: int = 2

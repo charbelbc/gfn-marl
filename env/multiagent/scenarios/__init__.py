@@ -10,4 +10,4 @@ import importlib
 def load(name):
     # remove ".py" if present
     module_name = name.replace(".py", "")
-    return importlib.import_module(f"multiagent.scenarios.{module_name}")
+    return importlib.import_module(f"env.multiagent.scenarios.{module_name}")
