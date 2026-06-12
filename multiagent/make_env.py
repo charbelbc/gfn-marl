@@ -13,7 +13,7 @@ communication actions in this array. See environment.py for more details.
 """
 
 
-def make_env(scenario_name, config, benchmark=False):
+def make_env(config, benchmark=False):
     """
     Creates a MultiAgentEnv object as env. This can be used similar to a gym
     environment by calling env.reset() and env.step().
@@ -34,7 +34,7 @@ def make_env(scenario_name, config, benchmark=False):
     import multiagent.scenarios as scenarios
 
     # load scenario from script
-    scenario = scenarios.load(scenario_name + ".py").Scenario()
+    scenario = scenarios.load(config.scenario_name + ".py").Scenario()
     # create world
     world = scenario.make_world(config)
     # create multiagent environment

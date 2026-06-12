@@ -19,6 +19,7 @@ class EMGFlowNet(torch.nn.Module):
         self.n_actions = config.gfn_state_size * config.gfn_dict_size + 1
         self.rand_prob = config.gfn_rand_prob
         self.greedy_decoder = config.gfn_greedy_decoder
+        self.ar_policy = config.gfn_ar_policy
         self.action_dim = config.action_dim
         self.single_codebook = config.gfn_single_codebook
         self.obs_dim = config.obs_dim
@@ -446,9 +447,16 @@ class EMGFlowNet(torch.nn.Module):
 
             enc_h = self.encoder_lstm(encoder_inputs[:, t].flatten(0, -2), enc_h)
 
-            forward_terminal_states, forward_log_pf = self.sample_ar_trajectories(
-                conditioning=enc_h, rand_prob=self.rand_prob
-            )
+            if self.ar_policy:
+                forward_terminal_states, forward_log_pf = self.sample_ar_trajectories(
+                    conditioning=enc_h, rand_prob=self.rand_prob
+                )
+            else:
+                forward_terminal_states, forward_log_pf, forward_log_pb = (
+                    self.sample_trajectories(
+                        conditioning=enc_h, rand_prob=self.rand_prob
+                    )
+                )
 
             with torch.no_grad():
                 if self.single_codebook:
@@ -503,7 +511,12 @@ class EMGFlowNet(torch.nn.Module):
 
                 log_z = self.logz(enc_h).squeeze()
 
-            gfn_loss[:, t] = (log_z + forward_log_pf - grewards.flatten()).pow(2)
+            if self.ar_policy:
+                gfn_loss[:, t] = (log_z + forward_log_pf - grewards.flatten()).pow(2)
+            else:
+                gfn_loss[:, t] = (
+                    log_z + forward_log_pf - forward_log_pb - grewards.flatten()
+                ).pow(2)
 
         self.gfn_optimizer.zero_grad()
         gfn_loss.mean().backward()
@@ -590,11 +603,18 @@ class EMGFlowNet(torch.nn.Module):
 
                 enc_h = self.encoder_lstm(encoder_inputs[:, t].flatten(0, -2), enc_h)
 
-                forward_terminal_states, _ = self.sample_ar_trajectories(
-                    conditioning=enc_h,
-                    rand_prob=0,
-                    prob_exponent=-1 if self.greedy_decoder else 1,
-                )
+                if self.ar_policy:
+                    forward_terminal_states, _ = self.sample_ar_trajectories(
+                        conditioning=enc_h,
+                        rand_prob=0,
+                        prob_exponent=-1 if self.greedy_decoder else 1,
+                    )
+                else:
+                    forward_terminal_states, _, _ = self.sample_trajectories(
+                        conditioning=enc_h,
+                        rand_prob=0,
+                        prob_exponent=-1 if self.greedy_decoder else 1,
+                    )
 
             if self.single_codebook:
                 z = self.codebook(
@@ -657,6 +677,7 @@ class EMGFlowNet(torch.nn.Module):
         gflownet_encoder_h: torch.Tensor,
         rand_prob: float = 0,
         prob_exponent: float = 1,
+        num_samples: int = 1,
     ) -> list[torch.Tensor, torch.Tensor, torch.Tensor]:
 
         batch, agents, _ = observations.shape
@@ -712,8 +733,12 @@ class EMGFlowNet(torch.nn.Module):
             gflownet_encoder_h.flatten(0, 2).to(self.device),
         )
 
+        next_gflownet_h_rep = (
+            next_gflownet_h.unsqueeze(1).repeat_interleave(num_samples, 1).flatten(0, 1)
+        )
+
         forward_terminal_states, _ = self.sample_ar_trajectories(
-            conditioning=next_gflownet_h,
+            conditioning=next_gflownet_h_rep,
             rand_prob=rand_prob,
             prob_exponent=prob_exponent,
         )
@@ -721,21 +746,21 @@ class EMGFlowNet(torch.nn.Module):
         if self.single_codebook:
             z = self.codebook(
                 forward_terminal_states.view(
-                    batch, agents, agents - 1, self.state_size
+                    batch, agents, agents - 1, num_samples, self.state_size
                 ).to(self.device)
             ).squeeze(-1)
         else:
             z = self.codebook[
                 torch.arange(self.state_size, device=self.device)
                 .unsqueeze(0)
-                .expand(batch * agents * (agents - 1), self.state_size),
+                .expand(batch * agents * (agents - 1) * num_samples, self.state_size),
                 forward_terminal_states.to(self.device),
-            ].view(batch, agents, agents - 1, self.state_size)
+            ].view(batch, agents, agents - 1, num_samples, self.state_size)
 
         return (
             z.detach(),
             forward_terminal_states.view(
-                batch, agents, agents - 1, self.state_size
+                batch, agents, agents - 1, num_samples, self.state_size
             ).detach(),
             next_gflownet_h.view(batch, agents, agents - 1, -1),
         )

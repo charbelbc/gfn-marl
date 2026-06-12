@@ -223,37 +223,113 @@ class MPE_Actor(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.fc = MLP(
+        self.actor = MLP(
             input_size=config.obs_dim,
-            output_size=config.actor["memory_size"],
-            hidden_sizes=config.actor["in_fc_layers"],
+            output_size=(
+                config.action_dim
+                if not config.use_gfn
+                else config.actor["no_memory_fc_layers"][-1]
+            ),
+            hidden_sizes=config.actor["no_memory_fc_layers"],
             activation=config.actor["activation"],
             with_feature_norm=config.actor["use_feature_norm"],
             with_layer_norm=config.actor["use_layer_norm"],
         )
+        if config.actor["orthogonal_init"]:
+            orthogonal_init(self.actor)
+            orthogonal_init(
+                self.actor.net[-1], gain=0.01 if not config.use_gfn else 1.0
+            )
+        if config.use_gfn:
+            self.latent_features = MLP(
+                input_size=config.gfn_state_size * config.gfn_dict_size,
+                output_size=16,
+                hidden_sizes=[],
+            )
+            self.film_layer = MLP(
+                input_size=16 * (config.num_agents - 1),
+                output_size=config.actor["no_memory_fc_layers"][-1],
+                hidden_sizes=[],
+                with_feature_norm=True,
+            )
+            self.out = MLP(
+                input_size=config.actor["no_memory_fc_layers"][-1],
+                output_size=config.action_dim,
+                hidden_sizes=[config.actor["no_memory_fc_layers"][-1]],
+                with_feature_norm=config.actor["use_layer_norm"],
+                with_layer_norm=False,
+            )
+            self.gfn_dict_size = config.gfn_dict_size
+            if config.actor["orthogonal_init"]:
+                orthogonal_init(self.film_layer)
+                orthogonal_init(self.out)
+                orthogonal_init(self.out.net[-1], gain=0.01)
 
-    def forward(self, observations):
+    def forward(self, observations, latents=None):
         actor_logits = self.actor(observations)
+        if latents is not None:
+            latents = (
+                torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
+                .float()
+                .flatten(-2)
+            )
+            latent_features = self.latent_features(latents).sum(-2).flatten(-2)
+            gamma = 1 + self.film_layer(latent_features)
+            actor_logits = self.out(actor_logits * gamma)
         return actor_logits.log_softmax(-1)
 
 
 class MPE_Critic(torch.nn.Module):
 
-    def __init__(self, state_dim: int = 20):
+    def __init__(self, config):
         super().__init__()
-        self.critic = torch.nn.Sequential(
-            torch.nn.Linear(state_dim, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, 64),
-            torch.nn.Tanh(),
-            torch.nn.Linear(64, 1),
+        self.critic = MLP(
+            input_size=config.state_dim,
+            output_size=(
+                1 if not config.use_gfn else config.critic["no_memory_fc_layers"][-1]
+            ),
+            hidden_sizes=config.critic["no_memory_fc_layers"],
+            activation=config.critic["activation"],
+            with_feature_norm=config.critic["use_feature_norm"],
+            with_layer_norm=config.critic["use_layer_norm"],
         )
-        orthogonal_init(self.critic)
+        if config.critic["orthogonal_init"]:
+            orthogonal_init(self.critic)
+        if config.use_gfn:
+            self.gfn_dict_size = config.gfn_dict_size
+            self.latent_features = MLP(
+                input_size=config.gfn_state_size * config.gfn_dict_size,
+                output_size=16,
+                hidden_sizes=[],
+            )
+            self.film_layer = MLP(
+                input_size=16 * config.num_agents * (config.num_agents - 1),
+                output_size=config.critic["no_memory_fc_layers"][-1],
+                hidden_sizes=[],
+                with_feature_norm=True,
+            )
+            self.out = MLP(
+                input_size=config.critic["no_memory_fc_layers"][-1],
+                output_size=1,
+                hidden_sizes=[config.critic["no_memory_fc_layers"][-1]],
+                with_feature_norm=config.critic["use_layer_norm"],
+                with_layer_norm=False,
+            )
+            if config.critic["orthogonal_init"]:
+                orthogonal_init(self.film_layer)
+                orthogonal_init(self.out)
 
-    def forward(self, observations):
+    def forward(self, observations, latents=None):
         value = self.critic(observations)
+        if latents is not None:
+            latents = (
+                torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
+                .float()
+                .flatten(-2)
+            )
+            latent_features = self.latent_features(latents).sum(-2).flatten(-3)
+            gamma = 1 + self.film_layer(latent_features)
+            value = self.out(value * gamma)
         return value
 
 
@@ -283,12 +359,18 @@ class MPE_RNN_Actor(torch.nn.Module):
         )
 
         if config.use_gfn:
+            self.latent_features = MLP(
+                input_size=config.gfn_state_size * config.gfn_dict_size,
+                output_size=16,
+                hidden_sizes=[],
+            )
             self.film_layer = MLP(
-                input_size=config.gfn_state_size * (config.num_agents - 1),
-                output_size=config.actor["memory_size"],
+                input_size=16 * (config.num_agents - 1),
+                output_size=config.actor["no_memory_fc_layers"][-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
+            self.gfn_dict_size = config.gfn_dict_size
             if config.actor["orthogonal_init"]:
                 orthogonal_init(self.film_layer)
 
@@ -306,7 +388,13 @@ class MPE_RNN_Actor(torch.nn.Module):
             batch, agents, -1
         )
         if latents is not None:
-            gamma = 1 + self.film_layer(latents.flatten(2))
+            latents = (
+                torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
+                .float()
+                .flatten(-2)
+            )
+            latent_features = self.latent_features(latents).sum(-2).flatten(-2)
+            gamma = 1 + self.film_layer(latent_features)
             actor_logits = self.out(actor_memory * gamma)
         else:
             actor_logits = self.out(actor_memory)
@@ -340,11 +428,15 @@ class MPE_RNN_Critic(torch.nn.Module):
         )
 
         if config.use_gfn:
+            self.gfn_dict_size = config.gfn_dict_size
+            self.latent_features = MLP(
+                input_size=config.gfn_state_size * config.gfn_dict_size,
+                output_size=16,
+                hidden_sizes=[],
+            )
             self.film_layer = MLP(
-                input_size=config.gfn_state_size
-                * (config.num_agents - 1)
-                * config.num_agents,
-                output_size=config.actor["memory_size"],
+                input_size=16 * config.num_agents * (config.num_agents - 1),
+                output_size=config.critic["no_memory_fc_layers"][-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
@@ -364,7 +456,13 @@ class MPE_RNN_Critic(torch.nn.Module):
             self.mem_norm(x), critic_rnn_hidden.flatten(0, 1)
         ).view(batch, agents, -1)
         if latents is not None:
-            gamma = 1 + self.film_layer(latents.flatten(2))
+            latents = (
+                torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
+                .float()
+                .flatten(-2)
+            )
+            latent_features = self.latent_features(latents).sum(-2).flatten(-3)
+            gamma = 1 + self.film_layer(latent_features)
             value = self.out(critic_memory * gamma)
         else:
             value = self.out(critic_memory)

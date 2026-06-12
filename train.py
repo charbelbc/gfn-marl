@@ -39,7 +39,7 @@ def train_mpe(
     if config.reward_normalization:
         reward_norm = Normalization(config.num_agents)
 
-    while (episode * config.episode_length) < 5_000_000:
+    while (episode * config.episode_length) < config.total_steps:
 
         obs = env.reset()
         dones = torch.zeros(batch_size, dtype=bool)
@@ -128,7 +128,7 @@ def train_mpe_gfn(
     if config.reward_normalization:
         reward_norm = Normalization(config.num_agents)
 
-    while (episode * config.episode_length) < 5_000_000:
+    while (episode * config.episode_length) < config.total_steps:
 
         obs = env.reset()
         dones = torch.zeros(batch_size, dtype=bool)

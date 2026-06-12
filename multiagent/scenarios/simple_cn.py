@@ -18,7 +18,7 @@ class Scenario(BaseScenario):
             agent.name = "agent %d" % i
             agent.collide = True
             agent.silent = True
-            agent.size = 0.3
+            agent.size = 0.6
         # add landmarks
         world.landmarks = [Landmark() for i in range(num_landmarks)]
         for i, landmark in enumerate(world.landmarks):
@@ -97,9 +97,9 @@ class Scenario(BaseScenario):
         for i, a in enumerate(world.agents):
             l = world.landmarks[i]
             dist = np.sqrt(np.sum(np.square(a.state.p_pos - l.state.p_pos)))
-            # rew -= (1 / 3) * dist
-            if dist < 0.2:
-                rew += 5.0
+            rew -= (1 / 3) * dist
+            # if dist < 0.2:
+            #     rew += 5.0
         if agent.collide:
             for a in world.agents:
                 if a is agent:

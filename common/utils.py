@@ -8,7 +8,7 @@ from multiagent.make_env import make_env
 
 
 def my_f(config):
-    return make_env("simple_cn", config)
+    return make_env(config)
 
 
 def worker(remote, parent_remote, env_fn, config, seed):
@@ -73,6 +73,7 @@ class MPE_ReplayBuffer:
         self.n_agents = config.num_agents
         self.obs_dim = config.obs_dim
         self.gfn_state_size = config.gfn_state_size
+        self.gfn_num_samples = config.gfn_num_samples
         # if config.use_gfn:
         # self.obs_dim += config.gfn_state_size * (config.num_agents - 1)
         self.buffer = None
@@ -100,6 +101,7 @@ class MPE_ReplayBuffer:
                     self.ep_limit,
                     self.n_agents,
                     self.n_agents - 1,
+                    self.gfn_num_samples,
                     self.gfn_state_size,
                 ],
                 dtype=float,

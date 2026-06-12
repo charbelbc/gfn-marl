@@ -288,10 +288,8 @@ class MPE_GFN_MAPPO:
                 self.critic.parameters()
             )
         else:
-            self.actor = MPE_Actor(
-                action_dim=config.action_dim, obs_dim=config.obs_dim
-            ).to(self.device)
-            self.critic = MPE_Critic(state_dim=config.state_dim).to(self.device)
+            self.actor = MPE_Actor(config).to(self.device)
+            self.critic = MPE_Critic(config).to(self.device)
             self.ac_parameters = list(self.actor.parameters()) + list(
                 self.critic.parameters()
             )
@@ -301,6 +299,7 @@ class MPE_GFN_MAPPO:
 
         self.gflownet = EMGFlowNet(device=device, config=config)
         self.gfn_sampling_exponent = config.gfn_sampling_exponent
+        self.gfn_num_samples = config.gfn_num_samples
 
     def select_action(
         self,
@@ -321,6 +320,7 @@ class MPE_GFN_MAPPO:
                 gfn_memory,
                 rand_prob=0,
                 prob_exponent=self.gfn_sampling_exponent,
+                num_samples=self.gfn_num_samples,
             )
             if self.use_rnn:
                 logits, actor_memory = self.actor(
@@ -348,15 +348,19 @@ class MPE_GFN_MAPPO:
                     next_gfn_memory,
                 )
             else:
-                logits = self.actor(obs)
+                logits = self.actor(obs, latents.float().to(self.device))
                 value = self.critic(
-                    obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1)
+                    obs.flatten(1).unsqueeze(1).repeat(1, self.n_agents, 1),
+                    latents.unsqueeze(1)
+                    .repeat_interleave(self.n_agents, 1)
+                    .float()
+                    .to(self.device),
                 )
                 dist = torch.distributions.Categorical(logits=logits)
                 action = dist.sample()
                 logprobs = dist.log_prob(action)
 
-                return action, logprobs, value.squeeze()
+                return action, logprobs, value.squeeze(), latents, next_gfn_memory
 
     def update(self, buffer: MPE_ReplayBuffer):
 
@@ -432,13 +436,19 @@ class MPE_GFN_MAPPO:
                     logits_now = torch.stack(logits_now, dim=1)
                     values_now = torch.stack(values_now, dim=1).squeeze(-1)
                 else:
-                    logits_now = self.actor(old_states[index].float())
+                    logits_now = self.actor(
+                        old_states[index].float(), latents[index].float()
+                    )
                     values_now = self.critic(
                         old_states[index]
                         .flatten(2)
                         .unsqueeze(2)
                         .repeat(1, 1, self.n_agents, 1)
-                        .float()
+                        .float(),
+                        latents[index]
+                        .unsqueeze(2)
+                        .repeat_interleave(self.n_agents, 2)
+                        .float(),
                     ).squeeze(-1)
 
                 distribution_now = torch.distributions.Categorical(logits=logits_now)

@@ -7,7 +7,8 @@ from typing import Dict
 @dataclass
 class Config:
 
-    scenario_name: str = "simple_spread"
+    scenario_name: str = "simple_pp"
+    total_steps: int = 5_000_000
     num_agents: int = 2
     num_landmarks: int = 3
     capture_requirement: int = 1
@@ -24,6 +25,7 @@ class Config:
 
     actor: Dict = field(
         default_factory=lambda: {
+            "no_memory_fc_layers": [64, 64],
             "in_fc_layers": [64, 64],
             "memory_size": 64,
             "activation": torch.nn.Tanh,
@@ -36,6 +38,7 @@ class Config:
 
     critic: Dict = field(
         default_factory=lambda: {
+            "no_memory_fc_layers": [64, 64],
             "in_fc_layers": [64, 64],
             "memory_size": 64,
             "activation": torch.nn.Tanh,
@@ -62,7 +65,9 @@ class Config:
     gfn_rand_prob: float = 0.3
     gfn_greedy_decoder: bool = True
     gfn_use_pb: bool = False
+    gfn_ar_policy: bool = True
     gfn_single_codebook: bool = True
-    gfn_sampling_exponent: float = -1
+    gfn_sampling_exponent: float = 1
+    gfn_num_samples: int = 2
     gfn_encoder_steps: int = 10
     gfn_decoder_steps: int = 1
