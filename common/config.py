@@ -71,3 +71,8 @@ class Config:
     gfn_num_samples: int = 2
     gfn_encoder_steps: int = 10
     gfn_decoder_steps: int = 1
+
+    use_vqvae: bool = True
+    vqvae_dict_size: int = 3
+    vqvae_state_size: int = 3
+    vqvae_lr: float = 0.0005
