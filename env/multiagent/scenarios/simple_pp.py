@@ -8,14 +8,14 @@ class Scenario(BaseScenario):
     def make_world(self, config):
         world = World()
 
-        self.num_predators = config.num_agents  # N
+        self.num_predators = config.env.num_agents  # N
         self.num_preys = 9  # M
-        self.capture_requirement = config.capture_requirement  # C
+        self.capture_requirement = config.env.capture_requirement  # C
         self.capture_radius = 0.3
         self.reward_value = 1
         world.dim_c = 2
         world.collaborative = True
-        world.episode_length = config.episode_length
+        world.episode_length = config.env.episode_length
 
         world.agents = [Agent() for _ in range(self.num_predators)]
         for i, agent in enumerate(world.agents):

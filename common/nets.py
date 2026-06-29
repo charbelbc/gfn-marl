@@ -1,6 +1,7 @@
 import torch
 import re
 import numpy as np
+from common.config import ModuleType
 
 
 def initialize_parameters(m):
@@ -223,43 +224,49 @@ class MPE_Actor(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.with_lv = config.use_gfn or config.use_vqvae
+        self.with_lv = config.module.type != ModuleType.NONE
         self.actor = MLP(
-            input_size=config.obs_dim,
+            input_size=config.env.obs_dim,
             output_size=(
-                config.action_dim
+                config.env.action_dim
                 if not self.with_lv
-                else config.actor["no_memory_fc_layers"][-1]
+                else config.training.actor.no_memory_fc_layers[-1]
             ),
-            hidden_sizes=config.actor["no_memory_fc_layers"],
-            activation=config.actor["activation"],
-            with_feature_norm=config.actor["use_feature_norm"],
-            with_layer_norm=config.actor["use_layer_norm"],
+            hidden_sizes=config.training.actor.no_memory_fc_layers,
+            activation=config.training.actor.activation,
+            with_feature_norm=config.training.actor.use_feature_norm,
+            with_layer_norm=config.training.actor.use_layer_norm,
         )
-        if config.actor["orthogonal_init"]:
+        if config.training.actor.orthogonal_init:
             orthogonal_init(self.actor)
             orthogonal_init(self.actor.net[-1], gain=0.01 if not self.with_lv else 1.0)
         if self.with_lv:
-            if config.use_gfn:
-                latent_input_size = config.gfn_state_size * config.gfn_dict_size
-            elif config.use_vqvae:
-                latent_input_size = config.vqvae_dict_size * config.vqvae_state_size
+            if config.module.type == ModuleType.GFN:
+                latent_input_size = (
+                    config.module.gfn_state_size * config.module.gfn_dict_size
+                )
+            elif config.module.type == ModuleType.VQVAE:
+                latent_input_size = (
+                    config.module.vqvae_dict_size * config.module.vqvae_state_size
+                )
+            elif config.module.type == ModuleType.VAE:
+                latent_input_size = config.module.vae_latent_size
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
                 hidden_sizes=[],
             )
             self.film_layer = MLP(
-                input_size=16 * (config.num_agents - 1),
-                output_size=config.actor["no_memory_fc_layers"][-1],
+                input_size=16 * (config.env.num_agents - 1),
+                output_size=config.training.actor.no_memory_fc_layers[-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
             self.out = MLP(
-                input_size=config.actor["no_memory_fc_layers"][-1],
-                output_size=config.action_dim,
-                hidden_sizes=[config.actor["no_memory_fc_layers"][-1]],
-                with_feature_norm=config.actor["use_layer_norm"],
+                input_size=config.training.actor.no_memory_fc_layers[-1],
+                output_size=config.env.action_dim,
+                hidden_sizes=[config.training.actor.no_memory_fc_layers[-1]],
+                with_feature_norm=config.training.actor.use_layer_norm,
                 with_layer_norm=False,
             )
             if config.actor["orthogonal_init"]:
@@ -270,11 +277,6 @@ class MPE_Actor(torch.nn.Module):
     def forward(self, observations, latents=None):
         actor_logits = self.actor(observations)
         if latents is not None:
-            # latents = (
-            #     torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
-            #     .float()
-            #     .flatten(-2)
-            # )
             latent_features = self.latent_features(latents).sum(-2).flatten(-2)
             gamma = 1 + self.film_layer(latent_features)
             actor_logits = self.out(actor_logits * gamma)
@@ -285,54 +287,57 @@ class MPE_Critic(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.with_lv = config.use_gfn or config.use_vqvae
+        self.with_lv = config.module.type != ModuleType.NONE
         self.critic = MLP(
-            input_size=config.state_dim,
+            input_size=config.env.state_dim,
             output_size=(
-                1 if not self.with_lv else config.critic["no_memory_fc_layers"][-1]
+                1
+                if not self.with_lv
+                else config.training.critic.no_memory_fc_layers[-1]
             ),
-            hidden_sizes=config.critic["no_memory_fc_layers"],
-            activation=config.critic["activation"],
-            with_feature_norm=config.critic["use_feature_norm"],
-            with_layer_norm=config.critic["use_layer_norm"],
+            hidden_sizes=config.training.critic.no_memory_fc_layers,
+            activation=config.training.critic.activation,
+            with_feature_norm=config.training.critic.use_feature_norm,
+            with_layer_norm=config.training.critic.use_layer_norm,
         )
-        if config.critic["orthogonal_init"]:
+        if config.training.critic.orthogonal_init:
             orthogonal_init(self.critic)
         if self.with_lv:
-            if config.use_gfn:
-                latent_input_size = config.gfn_state_size * config.gfn_dict_size
-            elif config.use_vqvae:
-                latent_input_size = config.vqvae_dict_size * config.vqvae_state_size
+            if config.module.type == ModuleType.GFN:
+                latent_input_size = (
+                    config.module.gfn_state_size * config.module.gfn_dict_size
+                )
+            elif config.module.type == ModuleType.VQVAE:
+                latent_input_size = (
+                    config.module.vqvae_dict_size * config.module.vqvae_state_size
+                )
+            elif config.module.type == ModuleType.VAE:
+                latent_input_size = config.module.vae_latent_size
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
                 hidden_sizes=[],
             )
             self.film_layer = MLP(
-                input_size=16 * config.num_agents * (config.num_agents - 1),
-                output_size=config.critic["no_memory_fc_layers"][-1],
+                input_size=16 * config.env.num_agents * (config.env.num_agents - 1),
+                output_size=config.training.critic.no_memory_fc_layers[-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
             self.out = MLP(
-                input_size=config.critic["no_memory_fc_layers"][-1],
+                input_size=config.training.critic.no_memory_fc_layers[-1],
                 output_size=1,
-                hidden_sizes=[config.critic["no_memory_fc_layers"][-1]],
-                with_feature_norm=config.critic["use_layer_norm"],
+                hidden_sizes=[config.training.critic.no_memory_fc_layers[-1]],
+                with_feature_norm=config.training.critic.use_layer_norm,
                 with_layer_norm=False,
             )
-            if config.critic["orthogonal_init"]:
+            if config.training.critic.orthogonal_init:
                 orthogonal_init(self.film_layer)
                 orthogonal_init(self.out)
 
     def forward(self, observations, latents=None):
         value = self.critic(observations)
         if latents is not None:
-            # latents = (
-            #     torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
-            #     .float()
-            #     .flatten(-2)
-            # )
             latent_features = self.latent_features(latents).sum(-2).flatten(-3)
             gamma = 1 + self.film_layer(latent_features)
             value = self.out(value * gamma)
@@ -343,47 +348,53 @@ class MPE_RNN_Actor(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.with_lv = config.use_gfn or config.use_vqvae
+        self.with_lv = config.module.type != ModuleType.NONE
         self.fc = MLP(
-            input_size=config.obs_dim,
-            output_size=config.actor["memory_size"],
-            hidden_sizes=config.actor["in_fc_layers"],
-            activation=config.actor["activation"],
-            with_feature_norm=config.actor["use_feature_norm"],
-            with_layer_norm=config.actor["use_layer_norm"],
+            input_size=config.env.obs_dim,
+            output_size=config.training.actor.memory_size,
+            hidden_sizes=config.training.actor.in_fc_layers,
+            activation=config.training.actor.activation,
+            with_feature_norm=config.training.actor.use_feature_norm,
+            with_layer_norm=config.training.actor.use_layer_norm,
         )
-        self.mem_norm = torch.nn.LayerNorm(config.actor["memory_size"])
+        self.mem_norm = torch.nn.LayerNorm(config.training.actor.memory_size)
         self.rnn = torch.nn.GRUCell(
-            config.actor["memory_size"], config.actor["memory_size"]
+            config.training.actor.memory_size, config.training.actor.memory_size
         )
         self.out = MLP(
-            input_size=config.actor["memory_size"],
-            output_size=config.action_dim,
-            hidden_sizes=config.actor["out_fc_layers"],
-            with_feature_norm=config.actor["use_layer_norm"],
+            input_size=config.training.actor.memory_size,
+            output_size=config.env.action_dim,
+            hidden_sizes=config.training.actor.out_fc_layers,
+            with_feature_norm=config.training.actor.use_layer_norm,
             with_layer_norm=False,
         )
 
         if self.with_lv:
-            if config.use_gfn:
-                latent_input_size = config.gfn_state_size * config.gfn_dict_size
-            elif config.use_vqvae:
-                latent_input_size = config.vqvae_dict_size * config.vqvae_state_size
+            if config.module.type == ModuleType.GFN:
+                latent_input_size = (
+                    config.module.gfn_state_size * config.module.gfn_dict_size
+                )
+            elif config.module.type == ModuleType.VQVAE:
+                latent_input_size = (
+                    config.module.vqvae_dict_size * config.module.vqvae_state_size
+                )
+            elif config.module.type == ModuleType.VAE:
+                latent_input_size = config.module.vae_latent_size
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
                 hidden_sizes=[],
             )
             self.film_layer = MLP(
-                input_size=16 * (config.num_agents - 1),
-                output_size=config.actor["no_memory_fc_layers"][-1],
+                input_size=16 * (config.env.num_agents - 1),
+                output_size=config.training.actor.no_memory_fc_layers[-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
-            if config.actor["orthogonal_init"]:
+            if config.training.actor.orthogonal_init:
                 orthogonal_init(self.film_layer)
 
-        if config.actor["orthogonal_init"]:
+        if config.training.actor.orthogonal_init:
             orthogonal_init(self.fc)
             orthogonal_init(self.rnn)
             orthogonal_init(self.out)
@@ -397,11 +408,6 @@ class MPE_RNN_Actor(torch.nn.Module):
             batch, agents, -1
         )
         if latents is not None:
-            # latents = (
-            #     torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
-            #     .float()
-            #     .flatten(-2)
-            # )
             latent_features = self.latent_features(latents).sum(-2).flatten(-2)
             gamma = 1 + self.film_layer(latent_features)
             actor_logits = self.out(actor_memory * gamma)
@@ -415,47 +421,53 @@ class MPE_RNN_Critic(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-        self.with_lv = config.use_gfn or config.use_vqvae
+        self.with_lv = config.module.type != ModuleType.NONE
         self.fc = MLP(
-            input_size=config.state_dim,
-            output_size=config.critic["memory_size"],
-            hidden_sizes=config.critic["in_fc_layers"],
-            activation=config.critic["activation"],
-            with_feature_norm=config.critic["use_feature_norm"],
-            with_layer_norm=config.critic["use_layer_norm"],
+            input_size=config.env.state_dim,
+            output_size=config.training.critic.memory_size,
+            hidden_sizes=config.training.critic.in_fc_layers,
+            activation=config.training.critic.activation,
+            with_feature_norm=config.training.critic.use_feature_norm,
+            with_layer_norm=config.training.critic.use_layer_norm,
         )
-        self.mem_norm = torch.nn.LayerNorm(config.critic["memory_size"])
+        self.mem_norm = torch.nn.LayerNorm(config.training.critic.memory_size)
         self.rnn = torch.nn.GRUCell(
-            config.critic["memory_size"], config.critic["memory_size"]
+            config.training.critic.memory_size, config.training.critic.memory_size
         )
         self.out = MLP(
-            input_size=config.critic["memory_size"],
+            input_size=config.training.critic.memory_size,
             output_size=1,
-            hidden_sizes=config.critic["out_fc_layers"],
-            with_feature_norm=config.critic["use_layer_norm"],
+            hidden_sizes=config.training.critic.out_fc_layers,
+            with_feature_norm=config.training.critic.use_layer_norm,
             with_layer_norm=False,
         )
 
         if self.with_lv:
-            if config.use_gfn:
-                latent_input_size = config.gfn_state_size * config.gfn_dict_size
-            elif config.use_vqvae:
-                latent_input_size = config.vqvae_dict_size * config.vqvae_state_size
+            if config.module.type == ModuleType.GFN:
+                latent_input_size = (
+                    config.module.gfn_state_size * config.module.gfn_dict_size
+                )
+            elif config.module.type == ModuleType.VQVAE:
+                latent_input_size = (
+                    config.module.vqvae_dict_size * config.module.vqvae_state_size
+                )
+            elif config.module.type == ModuleType.VAE:
+                latent_input_size = config.module.vae_latent_size
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
                 hidden_sizes=[],
             )
             self.film_layer = MLP(
-                input_size=16 * config.num_agents * (config.num_agents - 1),
-                output_size=config.critic["no_memory_fc_layers"][-1],
+                input_size=16 * config.env.num_agents * (config.env.num_agents - 1),
+                output_size=config.training.critic.no_memory_fc_layers[-1],
                 hidden_sizes=[],
                 with_feature_norm=True,
             )
-            if config.critic["orthogonal_init"]:
+            if config.training.critic.orthogonal_init:
                 orthogonal_init(self.film_layer)
 
-        if config.critic["orthogonal_init"]:
+        if config.training.critic.orthogonal_init:
             orthogonal_init(self.fc)
             orthogonal_init(self.rnn)
             orthogonal_init(self.out)
@@ -468,11 +480,6 @@ class MPE_RNN_Critic(torch.nn.Module):
             self.mem_norm(x), critic_rnn_hidden.flatten(0, 1)
         ).view(batch, agents, -1)
         if latents is not None:
-            # latents = (
-            #     torch.nn.functional.one_hot(latents.long(), self.gfn_dict_size)
-            #     .float()
-            #     .flatten(-2)
-            # )
             latent_features = self.latent_features(latents).sum(-2).flatten(-3)
             gamma = 1 + self.film_layer(latent_features)
             value = self.out(critic_memory * gamma)

@@ -16,25 +16,25 @@ class EMGFlowNet(torch.nn.Module):
         super().__init__()
 
         self.device = device
-        self.n_actions = config.gfn_state_size * config.gfn_dict_size + 1
-        self.rand_prob = config.gfn_rand_prob
-        self.greedy_decoder = config.gfn_greedy_decoder
-        self.ar_policy = config.gfn_ar_policy
-        self.action_dim = config.action_dim
-        self.single_codebook = config.gfn_single_codebook
-        self.obs_dim = config.obs_dim
+        self.n_actions = config.module.gfn_state_size * config.module.gfn_dict_size + 1
+        self.rand_prob = config.module.gfn_rand_prob
+        self.greedy_decoder = config.module.gfn_greedy_decoder
+        self.ar_policy = config.module.gfn_ar_policy
+        self.action_dim = config.env.action_dim
+        self.single_codebook = config.module.gfn_single_codebook
+        self.obs_dim = config.env.obs_dim
 
-        self.dict_size = config.gfn_dict_size
-        self.state_size = config.gfn_state_size
+        self.dict_size = config.module.gfn_dict_size
+        self.state_size = config.module.gfn_state_size
 
-        self.encoder_steps = config.gfn_encoder_steps
-        self.decoder_steps = config.gfn_decoder_steps
+        self.encoder_steps = config.module.gfn_encoder_steps
+        self.decoder_steps = config.module.gfn_decoder_steps
 
         self.action_encoder = MLP(
-            input_size=config.action_dim, output_size=16, hidden_sizes=[32]
+            input_size=config.env.action_dim, output_size=16, hidden_sizes=[32]
         ).to(self.device)
         self.observation_encoder = MLP(
-            input_size=config.obs_dim + config.num_agents,
+            input_size=config.env.obs_dim + config.env.num_agents,
             output_size=32,
             hidden_sizes=[32, 32],
             with_feature_norm=True,
@@ -47,9 +47,9 @@ class EMGFlowNet(torch.nn.Module):
             with_feature_norm=True,
             with_layer_norm=True,
         ).to(self.device)
-        self.encoder_lstm = torch.nn.GRUCell(32 + 16 + 16 * config.num_agents, 64).to(
-            self.device
-        )
+        self.encoder_lstm = torch.nn.GRUCell(
+            32 + 16 + 16 * config.env.num_agents, 64
+        ).to(self.device)
         enc_params = (
             list(self.action_encoder.parameters())
             + list(self.observation_encoder.parameters())
@@ -58,7 +58,7 @@ class EMGFlowNet(torch.nn.Module):
         )
 
         self.pf = MLP(
-            input_size=(config.gfn_dict_size + 1) * config.gfn_state_size,
+            input_size=(config.module.gfn_dict_size + 1) * config.module.gfn_state_size,
             output_size=64,
             hidden_sizes=[64, 64],
         ).to(self.device)
@@ -71,9 +71,10 @@ class EMGFlowNet(torch.nn.Module):
 
         enc_params += list(self.pf.parameters()) + list(self.pf_final.parameters())
 
-        if config.gfn_use_pb:
+        if config.module.gfn_use_pb:
             self.pb = MLP(
-                input_size=(config.gfn_dict_size + 1) * config.gfn_state_size,
+                input_size=(config.module.gfn_dict_size + 1)
+                * config.module.gfn_state_size,
                 output_size=64,
                 hidden_sizes=[64, 64],
             ).to(self.device)
@@ -92,42 +93,47 @@ class EMGFlowNet(torch.nn.Module):
             [
                 {
                     "params": enc_params,
-                    "lr": config.gfn_lr,
+                    "lr": config.module.gfn_lr,
                 },
                 {
                     "params": self.logz.parameters(),
-                    "lr": config.gfn_logz_lr,
+                    "lr": config.module.gfn_logz_lr,
                 },
             ]
         )
 
-        if config.gfn_single_codebook:
-            self.codebook = torch.nn.Embedding(config.gfn_dict_size, 1).to(self.device)
+        if config.module.gfn_single_codebook:
+            self.codebook = torch.nn.Embedding(config.module.gfn_dict_size, 1).to(
+                self.device
+            )
         else:
             self.codebook = torch.nn.Parameter(
                 torch.randn(
-                    config.gfn_state_size, config.gfn_dict_size, 1, device=self.device
+                    config.module.gfn_state_size,
+                    config.module.gfn_dict_size,
+                    1,
+                    device=self.device,
                 ),
                 requires_grad=True,
             ).to(self.device)
         self.decoder_obs_encoder = MLP(
-            input_size=config.obs_dim + config.num_agents,
+            input_size=config.env.obs_dim + config.env.num_agents,
             output_size=32,
             hidden_sizes=[32, 32],
         ).to(self.device)
         self.latent_layer = MLP(
-            input_size=config.gfn_state_size, output_size=32, hidden_sizes=[32]
+            input_size=config.module.gfn_state_size, output_size=32, hidden_sizes=[32]
         ).to(self.device)
         self.decoder_lstm = torch.nn.GRU(32, 32, batch_first=True).to(self.device)
         self.action_decoder = MLP(
-            input_size=32, output_size=config.action_dim, hidden_sizes=[64]
+            input_size=32, output_size=config.env.action_dim, hidden_sizes=[64]
         ).to(self.device)
 
         self.decoder_optimizer = torch.optim.Adam(
             params=(
                 (
                     list(self.codebook.parameters())
-                    if config.gfn_single_codebook
+                    if config.module.gfn_single_codebook
                     else [self.codebook]
                 )
                 + list(self.decoder_obs_encoder.parameters())
@@ -135,7 +141,7 @@ class EMGFlowNet(torch.nn.Module):
                 + list(self.decoder_lstm.parameters())
                 + list(self.action_decoder.parameters())
             ),
-            lr=config.gfn_dec_lr,
+            lr=config.module.gfn_dec_lr,
         )
 
     def preprocess_states(self, states: torch.Tensor) -> torch.Tensor:

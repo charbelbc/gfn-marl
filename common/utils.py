@@ -3,7 +3,7 @@ import gymnasium as gym
 import numpy as np
 import torch
 import random
-from common.config import Config
+from common.config import Config, ModuleType
 from env.multiagent.make_env import make_env
 
 
@@ -68,14 +68,23 @@ class MPE_ReplayBuffer:
         self,
         config: Config,
     ):
-        self.batch_size = config.batch_size
-        self.ep_limit = config.episode_length
-        self.n_agents = config.num_agents
-        self.obs_dim = config.obs_dim
-        self.gfn_state_size = config.gfn_state_size
-        self.gfn_num_samples = config.gfn_num_samples
-        # if config.use_gfn:
-        # self.obs_dim += config.gfn_state_size * (config.num_agents - 1)
+        self.batch_size = config.training.batch_size
+        self.ep_limit = config.env.episode_length
+        self.n_agents = config.env.num_agents
+        self.obs_dim = config.env.obs_dim
+
+        if config.module.type == ModuleType.NONE:
+            self.latent_size = 1
+            self.latent_num_samples = 1
+        if config.module.type == ModuleType.GFN:
+            self.latent_size = config.module.gfn_state_size
+            self.latent_num_samples = config.module.gfn_num_samples
+        elif config.module.type == ModuleType.VQVAE:
+            self.latent_size = config.module.vqvae_dict_size
+            self.latent_num_samples = 1
+        elif config.module.type == ModuleType.VAE:
+            self.latent_size = config.module.vae_latent_size
+            self.latent_num_samples = 1
         self.buffer = None
         self.reset_buffer()
 
@@ -101,8 +110,8 @@ class MPE_ReplayBuffer:
                     self.ep_limit,
                     self.n_agents,
                     self.n_agents - 1,
-                    self.gfn_num_samples,
-                    self.gfn_state_size,
+                    self.latent_num_samples,
+                    self.latent_size,
                 ],
                 dtype=float,
             ),

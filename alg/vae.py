@@ -4,58 +4,7 @@ from common.utils import MPE_ReplayBuffer
 from common.config import Config
 
 
-class EMAMultiCodebookQuantizer(torch.nn.Module):
-
-    def __init__(self, state_size, dict_size, emb_dim, decay=0.99, eps=1e-5):
-        super().__init__()
-        self.state_size = state_size
-        self.dict_size = dict_size
-        self.emb_dim = emb_dim
-        self.decay = decay
-        self.eps = eps
-
-        self.embedding = torch.nn.Parameter(
-            torch.randn(self.state_size, self.dict_size, self.emb_dim)
-        )
-        self.register_buffer(
-            "ema_cluster_size", torch.zeros(self.state_size, self.dict_size)
-        )
-        self.register_buffer(
-            "ema_w", torch.randn(self.state_size, self.dict_size, self.emb_dim)
-        )
-
-    def forward(self, z, training: bool = True):
-        batch, state_size, emb_dim = z.shape
-        assert state_size == self.state_size and emb_dim == self.emb_dim
-        z_exp = z.unsqueeze(2)
-        emb_exp = self.embedding.unsqueeze(0)
-        dist = torch.sum((z_exp - emb_exp) ** 2, dim=-1)
-        indices = torch.argmin(dist, dim=-1)
-        z_q = torch.gather(
-            self.embedding.unsqueeze(0).expand(batch, -1, -1, -1),
-            2,
-            indices.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 1, emb_dim),
-        ).squeeze(2)
-        if training:
-            one_hot = torch.nn.functional.one_hot(indices, self.dict_size).float()
-            cluster_size = one_hot.sum(dim=0)
-            dw = torch.einsum("bsk,bsd->skd", one_hot, z)
-            self.ema_cluster_size = (
-                self.decay * self.ema_cluster_size + (1 - self.decay) * cluster_size
-            )
-            self.ema_w = self.decay * self.ema_w + (1 - self.decay) * dw
-            n = self.ema_cluster_size.sum(dim=-1, keepdim=True)
-            cluster_size = (
-                (self.ema_cluster_size + self.eps) / (n + self.dict_size * self.eps) * n
-            )
-            self.embedding.data = self.ema_w / cluster_size.unsqueeze(-1)
-        loss = torch.nn.functional.mse_loss(z_q.detach(), z)
-        z_q = z + (z_q - z).detach()
-
-        return z_q, loss, indices
-
-
-class SequentialVQVAE(torch.nn.Module):
+class SequentialVAE(torch.nn.Module):
 
     def __init__(
         self,
@@ -69,8 +18,8 @@ class SequentialVQVAE(torch.nn.Module):
         self.device = device
         self.action_dim = config.env.action_dim
         self.obs_dim = config.env.obs_dim
-        self.dict_size = config.module.vqvae_dict_size
-        self.state_size = config.module.vqvae_state_size
+        self.latent_dim = config.module.vae_latent_size
+        self.kl_factor = config.module.vae_kl_factor
 
         self.action_encoder = MLP(
             input_size=config.env.action_dim, output_size=16, hidden_sizes=[32]
@@ -92,13 +41,11 @@ class SequentialVQVAE(torch.nn.Module):
         self.encoder_lstm = torch.nn.GRUCell(
             32 + 16 + 16 * config.env.num_agents, 64
         ).to(self.device)
-        self.encoder = MLP(64, self.state_size, [64]).to(self.device)
-        self.quantizer = EMAMultiCodebookQuantizer(
-            self.state_size, self.dict_size, 1
-        ).to(self.device)
+        self.latent_mu = MLP(64, self.latent_dim, [64]).to(self.device)
+        self.latent_logvar = MLP(64, self.latent_dim, [64]).to(self.device)
 
         self.latent_layer = MLP(
-            input_size=config.module.vqvae_state_size, output_size=32, hidden_sizes=[32]
+            input_size=self.latent_dim, output_size=32, hidden_sizes=[32]
         ).to(self.device)
         self.decoder_lstm = torch.nn.GRU(32, 32, batch_first=True).to(self.device)
         self.action_decoder = MLP(
@@ -110,14 +57,14 @@ class SequentialVQVAE(torch.nn.Module):
             + list(self.observation_encoder.parameters())
             + list(self.reward_encoder.parameters())
             + list(self.encoder_lstm.parameters())
-            + list(self.encoder.parameters())
-            + list(self.quantizer.parameters())
+            + list(self.latent_mu.parameters())
+            + list(self.latent_logvar.parameters())
             + list(self.latent_layer.parameters())
             + list(self.decoder_lstm.parameters())
             + list(self.action_decoder.parameters())
         )
 
-        self.vqvae_optimizer = torch.optim.Adam(params, lr=config.module.vqvae_lr)
+        self.vae_optimizer = torch.optim.Adam(params, lr=config.module.vae_lr)
 
     def update(self, buffer: MPE_ReplayBuffer):
 
@@ -186,22 +133,26 @@ class SequentialVQVAE(torch.nn.Module):
         )
 
         enc_h = torch.zeros(batch * agents * (agents - 1), 64, device=self.device)
-        dec_loss, quantization_loss = 0.0, 0.0
+
+        mu_prior = torch.zeros(
+            batch * agents * (agents - 1), self.latent_dim, device=self.device
+        )
+        logvar_prior = torch.zeros_like(mu_prior)
+
+        dec_loss, kl_loss = 0.0, 0.0
 
         for t in range(seq):
+
             enc_h = self.encoder_lstm(encoder_inputs[:, t].flatten(0, -2), enc_h)
-            z = (
-                self.encoder(enc_h)
-                .view(batch * agents * (agents - 1), self.state_size, 1)
-                .to(self.device)
-            )
-            z_q, q_loss, indices = self.quantizer(z)
-            quantization_loss += q_loss
-            z_q = z_q.view(batch, agents, agents - 1, self.state_size)
-            indices = indices.view(batch, agents, agents - 1, self.state_size)
+
+            mu_m = self.latent_mu(enc_h)
+            logvar_m = self.latent_logvar(enc_h)
+            z = mu_m + torch.randn_like(logvar_m) * torch.exp(0.5 * logvar_m)
+
+            z = z.view(batch, agents, agents - 1, self.latent_dim)
 
             # shape: [batch, agents, agents-1, features]
-            dec_h = self.latent_layer(z_q)
+            dec_h = self.latent_layer(z)
 
             rec = self.decoder_lstm(
                 obs_features[:, t:-1].permute(0, 2, 3, 1, 4).flatten(0, 2),
@@ -230,14 +181,25 @@ class SequentialVQVAE(torch.nn.Module):
                 reduction="sum",
             )
 
-        loss = (dec_loss + quantization_loss) / batch
-        self.vqvae_optimizer.zero_grad()
+            kl_loss += 0.5 * torch.sum(
+                logvar_prior
+                - logvar_m
+                + (torch.exp(logvar_m) + (mu_m - mu_prior) ** 2)
+                / torch.exp(logvar_prior)
+                - 1,
+                dim=-1,
+            ).sum(-1)
+
+            mu_prior, logvar_prior = mu_m, logvar_m
+
+        loss = (dec_loss + self.kl_factor * kl_loss) / batch
+        self.vae_optimizer.zero_grad()
         loss.backward()
-        self.vqvae_optimizer.step()
+        self.vae_optimizer.step()
 
         return {
             "dec_loss": (dec_loss / batch).item(),
-            "q_loss": (quantization_loss / batch).item(),
+            "q_loss": (kl_loss / batch).item(),
         }
 
     def sample_latents(
@@ -301,17 +263,13 @@ class SequentialVQVAE(torch.nn.Module):
             encoder_h.flatten(0, 2).to(self.device),
         )
 
-        z = (
-            self.encoder(next_encoder_h)
-            .view(batch * agents * (agents - 1), self.state_size, 1)
-            .to(self.device)
-        )
-        z_q, _, indices = self.quantizer(z)
-        z_q = z_q.view(batch, agents, agents - 1, 1, self.state_size)
-        indices = indices.view(batch, agents, agents - 1, 1, self.state_size)
+        mu_m = self.latent_mu(next_encoder_h)
+        logvar_m = self.latent_logvar(next_encoder_h)
+        z = mu_m + torch.randn_like(logvar_m) * torch.exp(0.5 * logvar_m)
+
+        z = z.view(batch, agents, agents - 1, 1, self.latent_dim)
 
         return (
-            z_q.detach(),
-            indices.detach(),
+            z.detach(),
             next_encoder_h.view(batch, agents, agents - 1, -1),
         )
