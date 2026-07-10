@@ -251,6 +251,8 @@ class MPE_Actor(torch.nn.Module):
                 )
             elif config.module.type == ModuleType.VAE:
                 latent_input_size = config.module.vae_latent_size
+            elif config.module.type == ModuleType.SUPTOM:
+                latent_input_size = sum(config.module.goal_size)
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
@@ -269,7 +271,7 @@ class MPE_Actor(torch.nn.Module):
                 with_feature_norm=config.training.actor.use_layer_norm,
                 with_layer_norm=False,
             )
-            if config.actor["orthogonal_init"]:
+            if config.training.actor.orthogonal_init:
                 orthogonal_init(self.film_layer)
                 orthogonal_init(self.out)
                 orthogonal_init(self.out.net[-1], gain=0.01)
@@ -313,6 +315,8 @@ class MPE_Critic(torch.nn.Module):
                 )
             elif config.module.type == ModuleType.VAE:
                 latent_input_size = config.module.vae_latent_size
+            elif config.module.type == ModuleType.SUPTOM:
+                latent_input_size = sum(config.module.goal_size)
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
@@ -380,6 +384,8 @@ class MPE_RNN_Actor(torch.nn.Module):
                 )
             elif config.module.type == ModuleType.VAE:
                 latent_input_size = config.module.vae_latent_size
+            elif config.module.type == ModuleType.SUPTOM:
+                latent_input_size = sum(config.module.goal_size)
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,
@@ -453,6 +459,8 @@ class MPE_RNN_Critic(torch.nn.Module):
                 )
             elif config.module.type == ModuleType.VAE:
                 latent_input_size = config.module.vae_latent_size
+            elif config.module.type == ModuleType.SUPTOM:
+                latent_input_size = sum(config.module.goal_size)
             self.latent_features = MLP(
                 input_size=latent_input_size,
                 output_size=16,

@@ -123,6 +123,9 @@ class VAEConfig(ModuleConfig):
 @dataclass
 class SupTomConfig(ModuleConfig):
     type: ModuleType = ModuleType.SUPTOM
+    goal_size: list[int] = field(default_factory=lambda: [2, 2])
+    belief_lr: float = 0.0005
+    belief_reward_factor: float = 1.0
 
 
 @dataclass

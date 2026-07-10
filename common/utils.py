@@ -85,6 +85,9 @@ class MPE_ReplayBuffer:
         elif config.module.type == ModuleType.VAE:
             self.latent_size = config.module.vae_latent_size
             self.latent_num_samples = 1
+        elif config.module.type == ModuleType.SUPTOM:
+            self.latent_size = 1
+            self.latent_num_samples = 1
         self.buffer = None
         self.reset_buffer()
 
