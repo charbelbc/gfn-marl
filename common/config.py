@@ -29,6 +29,19 @@ class PredatorPreyConfig(EnvConfig):
 
 
 @dataclass
+class TrafficJunctionConfig(EnvConfig):
+    dim: int = 14
+    vision: int = 3
+    num_agents: int = 5
+    difficulty: str = "easy"
+    add_rate_min: float = 0.05
+    add_rate_max: float = 0.2
+    curr_start: int = 0
+    curr_end: int = 0
+    vocab_type: str = "bool"
+
+
+@dataclass
 class NetworkConfig:
     pass
 
